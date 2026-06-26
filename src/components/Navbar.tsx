@@ -57,7 +57,7 @@ export function Navbar({ onBookClick }: { onBookClick?: () => void }) {
           <img src="/logo.png" alt="Avetisyan Beauty Clinic" className="h-12 w-auto object-contain" onError={(e) => {
             // Fallback if image not uploaded yet
             e.currentTarget.style.display = 'none';
-            e.currentTarget.nextElementSibling!.classList.remove('hidden');
+            e.currentTarget.nextElementSibling?.classList.remove('hidden');
           }} />
           <div className="hidden flex-col">
             <span className="font-display font-bold text-xl tracking-widest text-gold uppercase">

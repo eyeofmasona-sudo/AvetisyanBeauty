@@ -77,9 +77,9 @@ function HomePage() {
 
 export default function App() {
   useEffect(() => {
-    loadContentFromDB();
-    import("./store/galleryStore").then(m => m.loadGalleryFromDB());
-    useSettingsStore.getState().loadFromDB();
+    loadContentFromDB().catch(console.error);
+    import("./store/galleryStore").then(m => m.loadGalleryFromDB().catch(console.error)).catch(console.error);
+    useSettingsStore.getState().loadFromDB().catch(console.error);
   }, []);
 
   return (

@@ -15,7 +15,7 @@ export function Footer() {
               <img src="/logo.png" alt="Avetisyan Beauty Clinic" className="h-16 w-auto object-contain object-left" onError={(e) => {
                 // Fallback if image not uploaded yet
                 e.currentTarget.style.display = 'none';
-                e.currentTarget.nextElementSibling!.classList.remove('hidden');
+                e.currentTarget.nextElementSibling?.classList.remove('hidden');
               }} />
               <div className="hidden flex-col">
                 <span className="font-display font-bold text-2xl tracking-widest text-graphite uppercase">
@@ -85,7 +85,6 @@ export function Footer() {
               {t("footer.contact")}
             </h4>
             <ul className="flex flex-col gap-4 text-graphite/60 font-light">
-              <li>+374 10 123 456</li>
               <li>WhatsApp: +374 33 10 10 77</li>
               <li className="mt-4 whitespace-pre-line">
                 {t("footer.address")}
