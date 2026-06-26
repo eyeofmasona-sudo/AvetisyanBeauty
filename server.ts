@@ -248,35 +248,64 @@ async function startServer() {
   });
 
   // 8. Instagram Basic Display API Integration
-  let instagramToken: string | null = process.env.INSTAGRAM_ACCESS_TOKEN || null;
+  let instagramTokens: string[] = process.env.INSTAGRAM_ACCESS_TOKEN ? [process.env.INSTAGRAM_ACCESS_TOKEN] : [];
 
   app.post("/api/instagram/token", (req, res) => {
-    const { token } = req.body;
+    const { token, accountIndex = 0 } = req.body;
     if (!token) {
       return res.status(400).json({ error: "Token is required" });
     }
-    instagramToken = token;
+    instagramTokens[accountIndex] = token;
     res.json({ success: true, message: "Token stored securely" });
+  });
+
+  app.post("/api/instagram/token/remove", (req, res) => {
+    const { accountIndex } = req.body;
+    if (accountIndex !== undefined && accountIndex >= 0 && accountIndex < instagramTokens.length) {
+       instagramTokens[accountIndex] = ''; // Or use splice, but keeping array size might be easier if we rely on indices 0 and 1
+    }
+    res.json({ success: true, message: "Token removed" });
   });
 
   app.get("/api/instagram/posts", async (req, res) => {
     try {
-      if (!instagramToken) {
-        return res.status(401).json({ error: "Instagram token not configured" });
+      const validTokens = instagramTokens.filter(t => t && t.trim() !== "");
+      if (validTokens.length === 0) {
+        return res.status(401).json({ error: "Instagram tokens not configured" });
       }
 
-      // Fetch user profile to get media
-      const mediaResponse = await fetch(`https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp&access_token=${instagramToken}`);
-      
-      if (!mediaResponse.ok) {
-        const errorData = await mediaResponse.json();
-        throw new Error(errorData.error?.message || "Failed to fetch Instagram posts");
+      let allPosts: any[] = [];
+
+      for (const token of validTokens) {
+        try {
+          const mediaResponse = await fetch(`https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp&access_token=${token}`);
+          if (mediaResponse.ok) {
+             const mediaData = await mediaResponse.json();
+             if (mediaData.data && Array.isArray(mediaData.data)) {
+                 allPosts = [...allPosts, ...mediaData.data];
+             }
+          } else {
+             console.error("Failed to fetch posts for one token", await mediaResponse.text());
+          }
+        } catch (err) {
+          console.error("Error fetching for a token", err);
+        }
       }
 
-      const mediaData = await mediaResponse.json();
-      
+      // Sort by timestamp descending
+      allPosts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      // Deduplicate by ID just in case
+      const uniquePostsMap = new Map();
+      allPosts.forEach(post => {
+          if (!uniquePostsMap.has(post.id)) {
+              uniquePostsMap.set(post.id, post);
+          }
+      });
+      allPosts = Array.from(uniquePostsMap.values());
+
       // Format to match our InstagramPost interface
-      const posts = mediaData.data.map((post: any) => ({
+      const posts = allPosts.map((post: any) => ({
         id: post.id,
         image: post.media_type === 'VIDEO' ? post.thumbnail_url || post.media_url : post.media_url,
         link: post.permalink,

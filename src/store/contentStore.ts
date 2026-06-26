@@ -189,11 +189,15 @@ interface ContentState {
   instagramPosts: InstagramPost[];
   instagramConnected: boolean;
   instagramHandle: string;
+  secondInstagramConnected: boolean;
+  secondInstagramHandle: string;
   updateContent: (lang: 'hy' | 'ru' | 'en', section: keyof SiteContent, data: any) => void;
   updateInstagramPost: (index: number, post: Partial<InstagramPost>) => void;
   setInstagramPosts: (posts: InstagramPost[]) => void;
   connectInstagram: (handle: string) => void;
   disconnectInstagram: () => void;
+  connectSecondInstagram: (handle: string) => void;
+  disconnectSecondInstagram: () => void;
   resetContent: () => void;
 }
 
@@ -204,6 +208,8 @@ export const useContentStore = create<ContentState>()(
       instagramPosts: defaultInstaPosts,
       instagramConnected: false,
       instagramHandle: '',
+      secondInstagramConnected: false,
+      secondInstagramHandle: '',
       updateContent: (lang, section, data) => 
         set((state) => ({
           content: {
@@ -223,7 +229,9 @@ export const useContentStore = create<ContentState>()(
       setInstagramPosts: (posts) => set({ instagramPosts: posts }),
       connectInstagram: (handle) => set({ instagramConnected: true, instagramHandle: handle }),
       disconnectInstagram: () => set({ instagramConnected: false, instagramHandle: '' }),
-      resetContent: () => set({ content: defaultContent, instagramPosts: defaultInstaPosts, instagramConnected: false, instagramHandle: '' }),
+      connectSecondInstagram: (handle) => set({ secondInstagramConnected: true, secondInstagramHandle: handle }),
+      disconnectSecondInstagram: () => set({ secondInstagramConnected: false, secondInstagramHandle: '' }),
+      resetContent: () => set({ content: defaultContent, instagramPosts: defaultInstaPosts, instagramConnected: false, instagramHandle: '', secondInstagramConnected: false, secondInstagramHandle: '' }),
     }),
     {
       name: 'avetisyan-clinic-content-localized',

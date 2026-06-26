@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
@@ -10,11 +10,14 @@ import {
   LayoutDashboard, Sparkles, Image as ImageIcon, 
   Users, Star, FileText, CalendarHeart, 
   TrendingUp, BarChart3, Settings, BrainCircuit,
-  Instagram, CheckCircle, Loader2
+  Instagram, CheckCircle, Loader2, LogOut
 } from "lucide-react";
 import { AIPanel } from "../components/AIPanel";
 import { AIAssistantModule } from "../components/AIAssistantModule";
 import { instagramService } from "../services/instagramService";
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth, db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export function AdminPanel() {
   const { t } = useTranslation();
@@ -24,9 +27,23 @@ export function AdminPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [editingServiceImageUrl, setEditingServiceImageUrl] = useState<string>('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [loginError, setLoginError] = useState('');
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
+      setIsAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);  
   const [formData, setFormData] = useState<Omit<GalleryCase, 'id'>>({
     protocol: "",
     patientDesc: "",
@@ -36,9 +53,11 @@ export function AdminPanel() {
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
   const [isConnectingInstagram, setIsConnectingInstagram] = useState(false);
   const [tempInstaHandle, setTempInstaHandle] = useState('');
+  const [isConnectingSecondInstagram, setIsConnectingSecondInstagram] = useState(false);
+  const [tempSecondInstaHandle, setTempSecondInstaHandle] = useState('');
   const [isSyncingInstagram, setIsSyncingInstagram] = useState(false);
 
-  const { content, updateContent, instagramPosts, updateInstagramPost, setInstagramPosts, instagramConnected, instagramHandle, connectInstagram, disconnectInstagram } = useContentStore();
+  const { content, updateContent, instagramPosts, updateInstagramPost, setInstagramPosts, instagramConnected, instagramHandle, connectInstagram, disconnectInstagram, secondInstagramConnected, secondInstagramHandle, connectSecondInstagram, disconnectSecondInstagram } = useContentStore();
 
   const handleOpenModal = (caseItem?: GalleryCase) => {
     if (caseItem) {
@@ -87,15 +106,33 @@ export function AdminPanel() {
     { id: "specialists", icon: Users, label: t("admin.specialists") },
   ];
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple mock authentication
-    if (loginForm.username === 'admin' && loginForm.password === 'admin') {
-      setIsAuthenticated(true);
-    } else {
-      alert('Invalid credentials');
+    setLoginError('');
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      setLoginError(error.message || 'Authentication failed');
     }
   };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  if (isAuthLoading) {
+    return (
+      <div className="bg-pearl min-h-screen text-graphite flex flex-col items-center justify-center p-6">
+        <Loader2 className="animate-spin text-gold" size={48} />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -108,33 +145,12 @@ export function AdminPanel() {
             <p className="text-graphite/60 text-sm">{t("admin.portalDesc", "Secure access to Avetisyan Beauty Clinic management")}</p>
           </div>
           <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-xs font-medium text-graphite/60 uppercase tracking-widest mb-2">{t("admin.username", "Username")}</label>
-              <input 
-                type="text" 
-                value={loginForm.username}
-                onChange={e => setLoginForm({...loginForm, username: e.target.value})}
-                className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold transition-colors"
-                placeholder="admin"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-graphite/60 uppercase tracking-widest mb-2">{t("admin.password", "Password")}</label>
-              <input 
-                type="password" 
-                value={loginForm.password}
-                onChange={e => setLoginForm({...loginForm, password: e.target.value})}
-                className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold transition-colors"
-                placeholder="••••••••"
-                required
-              />
-            </div>
+            {loginError && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">{loginError}</div>}
             <button 
               type="submit" 
               className="w-full bg-graphite text-white px-8 py-3.5 rounded-xl hover:bg-gold transition-colors font-medium text-sm tracking-wide mt-4"
             >
-              {t("admin.signIn", "Sign In")}
+              Sign In with Google
             </button>
           </form>
         </div>
@@ -153,7 +169,12 @@ export function AdminPanel() {
           {/* Sidebar */}
           <aside className="w-full md:w-64 flex-shrink-0">
             <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-graphite/5 sticky top-32">
-              <h2 className="font-display text-xl mb-6 px-4">{t("admin.title")}</h2>
+              <h2 className="font-display text-xl mb-6 px-4 flex justify-between items-center">
+                <span>{t("admin.title")}</span>
+                <button onClick={handleLogout} className="text-graphite/40 hover:text-graphite transition-colors" title="Log out">
+                  <LogOut size={18} />
+                </button>
+              </h2>
               <nav className="flex flex-col gap-1">
                 {menuItems.map((item) => (
                   <button

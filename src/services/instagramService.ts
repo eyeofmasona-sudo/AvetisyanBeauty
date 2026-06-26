@@ -4,19 +4,39 @@ export const instagramService = {
   /**
    * Save the Instagram token securely on the server
    */
-  async saveToken(token: string): Promise<boolean> {
+  async saveToken(token: string, accountIndex: number = 0): Promise<boolean> {
     try {
       const response = await fetch('/api/instagram/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ token, accountIndex }),
       });
       const data = await response.json();
       return data.success;
     } catch (error) {
       console.error('Failed to save Instagram token:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Remove the Instagram token from the server
+   */
+  async removeToken(accountIndex: number = 0): Promise<boolean> {
+    try {
+      const response = await fetch('/api/instagram/token/remove', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accountIndex }),
+      });
+      const data = await response.json();
+      return data.success;
+    } catch (error) {
+      console.error('Failed to remove Instagram token:', error);
       return false;
     }
   },
