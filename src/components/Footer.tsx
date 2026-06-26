@@ -85,7 +85,16 @@ export function Footer() {
               {t("footer.contact")}
             </h4>
             <ul className="flex flex-col gap-4 text-graphite/60 font-light">
-              <li>WhatsApp: +374 33 10 10 77</li>
+              <li>
+                <a 
+                  href="https://wa.me/37433101077" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hover:text-gold transition-colors"
+                >
+                  WhatsApp: +374 33 10 10 77
+                </a>
+              </li>
               <li className="mt-4 whitespace-pre-line">
                 {t("footer.address")}
               </li>
