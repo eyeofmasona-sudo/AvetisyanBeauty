@@ -31,9 +31,19 @@ instagramWebhookRoute.post('/', (req, res) => {
     }
   }
 
-  console.log("Instagram Webhook Received:", req.body);
+  console.log("Instagram Webhook Received:", JSON.stringify(req.body, null, 2));
   
-  // Here we would route the message to the AI Assistant logic
+  if (req.body.object === 'instagram' && Array.isArray(req.body.entry)) {
+    req.body.entry.forEach((entry: any) => {
+      const accountId = entry.id;
+      // TODO: Map accountId to stored accounts and route appropriately
+      console.log(`Processing webhook entry for account: ${accountId}`);
+      // Here we would route the message to the AI Assistant logic for this specific account
+    });
+  } else {
+    // Legacy fallback or unknown format
+    console.log("Processing legacy or non-standard webhook format");
+  }
   
   res.status(200).send("EVENT_RECEIVED");
 });

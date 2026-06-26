@@ -86,7 +86,7 @@ export function Footer() {
             </h4>
             <ul className="flex flex-col gap-4 text-graphite/60 font-light">
               <li>+374 10 123 456</li>
-              <li>contact@avetisyanclinic.com</li>
+              <li>WhatsApp: +374 33 10 10 77</li>
               <li className="mt-4 whitespace-pre-line">
                 {t("footer.address")}
               </li>

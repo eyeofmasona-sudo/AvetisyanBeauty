@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { db } from '../lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export interface SectionContent {
   title?: string;
@@ -12,6 +14,7 @@ export interface ServiceItem {
   title: string;
   description: string;
   tag: string;
+  price?: string;
   image_url?: string;
   href?: string;
 }
@@ -201,6 +204,25 @@ interface ContentState {
   resetContent: () => void;
 }
 
+export const loadContentFromDB = async () => {
+  try {
+    const docSnap = await getDoc(doc(db, 'site', 'content'));
+    if (docSnap.exists()) {
+      useContentStore.setState({ content: docSnap.data() as LocalizedContent });
+    }
+  } catch (e) {
+    console.error("Failed to load content from DB", e);
+  }
+};
+
+export const saveContentToDB = async (content: LocalizedContent) => {
+  try {
+    await setDoc(doc(db, 'site', 'content'), content);
+  } catch (e) {
+    console.error("Failed to save content to DB", e);
+  }
+};
+
 export const useContentStore = create<ContentState>()(
   persist(
     (set) => ({
@@ -211,15 +233,17 @@ export const useContentStore = create<ContentState>()(
       secondInstagramConnected: false,
       secondInstagramHandle: '',
       updateContent: (lang, section, data) => 
-        set((state) => ({
-          content: {
+        set((state) => {
+          const newContent = {
             ...state.content,
             [lang]: {
               ...state.content[lang],
               [section]: { ...state.content[lang][section], ...data }
             }
-          }
-        })),
+          };
+          saveContentToDB(newContent);
+          return { content: newContent };
+        }),
       updateInstagramPost: (index, post) => 
         set((state) => {
           const newPosts = [...state.instagramPosts];

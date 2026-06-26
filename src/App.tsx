@@ -8,6 +8,7 @@ import { ResultsSection } from "./components/ResultsSection";
 import { SpecialistsSection } from "./components/SpecialistsSection";
 import { TrustSection } from "./components/TrustSection";
 import { InstagramCarousel } from "./components/InstagramCarousel";
+import { VideoCarousel } from "./components/VideoCarousel";
 import { Footer } from "./components/Footer";
 import { BookingModal } from "./components/BookingModal";
 import { UltraformerIII } from "./pages/UltraformerIII";
@@ -33,17 +34,23 @@ function LanguageWrapper({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+import { loadContentFromDB } from "./store/contentStore";
+import { useSettingsStore } from "./store/settingsStore";
+
 function HomePage() {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
 
   return (
-    <div className="bg-pearl min-h-screen text-graphite selection:bg-gold/30 selection:text-graphite">
+    <div className="bg-pearl min-h-screen text-graphite selection:bg-gold/30 selection:text-graphite overflow-x-hidden">
       <SEO titleKey="seo.home.title" descriptionKey="seo.home.description" />
       <Navbar onBookClick={() => setIsBookingOpen(true)} />
-      <main>
+      <main className="overflow-x-hidden">
         <HeroSection onBookClick={() => setIsBookingOpen(true)} />
         <ScrollReveal>
           <ServicesSection />
+        </ScrollReveal>
+        <ScrollReveal>
+          <VideoCarousel />
         </ScrollReveal>
         <ScrollReveal>
           <ResultsSection />
@@ -69,6 +76,12 @@ function HomePage() {
 }
 
 export default function App() {
+  useEffect(() => {
+    loadContentFromDB();
+    import("./store/galleryStore").then(m => m.loadGalleryFromDB());
+    useSettingsStore.getState().loadFromDB();
+  }, []);
+
   return (
     <HelmetProvider>
       <BrowserRouter>

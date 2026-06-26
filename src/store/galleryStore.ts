@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { db } from '../lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export interface GalleryCase {
   id: string;
@@ -54,19 +56,44 @@ const defaultCases: GalleryCase[] = [
   }
 ];
 
+export const loadGalleryFromDB = async () => {
+  try {
+    const docSnap = await getDoc(doc(db, 'site', 'gallery'));
+    if (docSnap.exists()) {
+      useGalleryStore.setState({ cases: docSnap.data().cases as GalleryCase[] });
+    }
+  } catch (e) {
+    console.error("Failed to load gallery from DB", e);
+  }
+};
+
+export const saveGalleryToDB = async (cases: GalleryCase[]) => {
+  try {
+    await setDoc(doc(db, 'site', 'gallery'), { cases });
+  } catch (e) {
+    console.error("Failed to save gallery to DB", e);
+  }
+};
+
 export const useGalleryStore = create<GalleryStore>()(
   persist(
     (set) => ({
       cases: defaultCases,
-      addCase: (newCase) => set((state) => ({
-        cases: [...state.cases, { ...newCase, id: Date.now().toString() }]
-      })),
-      updateCase: (id, updatedCase) => set((state) => ({
-        cases: state.cases.map(c => c.id === id ? { ...c, ...updatedCase } : c)
-      })),
-      deleteCase: (id) => set((state) => ({
-        cases: state.cases.filter(c => c.id !== id)
-      }))
+      addCase: (newCase) => set((state) => {
+        const newCases = [...state.cases, { ...newCase, id: Date.now().toString() }];
+        saveGalleryToDB(newCases);
+        return { cases: newCases };
+      }),
+      updateCase: (id, updatedCase) => set((state) => {
+        const newCases = state.cases.map(c => c.id === id ? { ...c, ...updatedCase } : c);
+        saveGalleryToDB(newCases);
+        return { cases: newCases };
+      }),
+      deleteCase: (id) => set((state) => {
+        const newCases = state.cases.filter(c => c.id !== id);
+        saveGalleryToDB(newCases);
+        return { cases: newCases };
+      })
     }),
     {
       name: 'golden-sun-gallery'

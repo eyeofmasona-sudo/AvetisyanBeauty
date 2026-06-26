@@ -1,10 +1,24 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useSettingsStore } from '../store/settingsStore';
 
 export function WhatsAppButton() {
+  const { settings } = useSettingsStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const cleanNumber = settings?.whatsappNumber?.replace(/[^\d+]/g, '') || '+37433101077';
+  const finalNumber = cleanNumber.startsWith('+') ? cleanNumber.substring(1) : cleanNumber;
+  const waUrl = `https://wa.me/${finalNumber || '37433101077'}`;
+
+  if (!mounted) return null;
+
   return (
     <motion.a
-      href="https://wa.me/37410123456" 
+      href={waUrl}
       target="_blank"
       rel="noopener noreferrer"
       initial={{ opacity: 0, scale: 0 }}

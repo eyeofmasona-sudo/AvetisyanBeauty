@@ -4,46 +4,59 @@ import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
 import { useGalleryStore, GalleryCase } from "../store/galleryStore";
 import { useContentStore } from "../store/contentStore";
+import { useSettingsStore, SiteVideo } from "../store/settingsStore";
 import { SEO } from "../components/SEO";
 import { 
   Trash2, Edit2, Plus, X, 
   LayoutDashboard, Sparkles, Image as ImageIcon, 
   Users, Star, FileText, CalendarHeart, 
   TrendingUp, BarChart3, Settings, BrainCircuit,
-  Instagram, CheckCircle, Loader2, LogOut
+  Instagram, CheckCircle, Loader2, LogOut, Video
 } from "lucide-react";
 import { AIPanel } from "../components/AIPanel";
 import { AIAssistantModule } from "../components/AIAssistantModule";
 import { instagramService } from "../services/instagramService";
-import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth, db } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
 export function AdminPanel() {
   const { t } = useTranslation();
   const { cases, addCase, updateCase, deleteCase } = useGalleryStore();
+  const { settings, updateWhatsapp, addVideo, updateVideo, deleteVideo } = useSettingsStore();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
-  const [editingServiceImageUrl, setEditingServiceImageUrl] = useState<string>('');
+  const [editingServiceData, setEditingServiceData] = useState<any>(null);
+  const [editingSpecialistId, setEditingSpecialistId] = useState<string | null>(null);
+  const [editingSpecialistData, setEditingSpecialistData] = useState<any>(null);
   
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
+  const [videoFormData, setVideoFormData] = useState<Omit<SiteVideo, 'id'>>({
+    title: "", description: "", videoUrl: "", posterUrl: "", order: 0, isActive: true
+  });
+  const [waNumberInput, setWaNumberInput] = useState(settings?.whatsappNumber || "");
+  const [isWaSaving, setIsWaSaving] = useState(false);
+  const [waSaveSuccess, setWaSaveSuccess] = useState(false);
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [loginError, setLoginError] = useState('');
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setIsAuthenticated(true);
-      } else {
+    fetch('/api/auth/verify')
+      .then(res => res.json())
+      .then(data => {
+        setIsAuthenticated(data.authenticated);
+        setIsAuthLoading(false);
+      })
+      .catch(() => {
         setIsAuthenticated(false);
-      }
-      setIsAuthLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);  
+        setIsAuthLoading(false);
+      });
+  }, []);
   const [formData, setFormData] = useState<Omit<GalleryCase, 'id'>>({
     protocol: "",
     patientDesc: "",
@@ -58,6 +71,32 @@ export function AdminPanel() {
   const [isSyncingInstagram, setIsSyncingInstagram] = useState(false);
 
   const { content, updateContent, instagramPosts, updateInstagramPost, setInstagramPosts, instagramConnected, instagramHandle, connectInstagram, disconnectInstagram, secondInstagramConnected, secondInstagramHandle, connectSecondInstagram, disconnectSecondInstagram } = useContentStore();
+
+  useEffect(() => {
+    setWaNumberInput(settings?.whatsappNumber || "");
+  }, [settings?.whatsappNumber]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      instagramService.fetchStatus().then(statusList => {
+        statusList.forEach((status: any) => {
+          if (status.accountIndex === 0) {
+            if (status.connected) {
+              connectInstagram(status.handle || instagramHandle);
+            } else {
+              disconnectInstagram();
+            }
+          } else if (status.accountIndex === 1) {
+            if (status.connected) {
+              connectSecondInstagram(status.handle || secondInstagramHandle);
+            } else {
+              disconnectSecondInstagram();
+            }
+          }
+        });
+      });
+    }
+  }, [isAuthenticated]);
 
   const handleOpenModal = (caseItem?: GalleryCase) => {
     if (caseItem) {
@@ -82,6 +121,40 @@ export function AdminPanel() {
     setIsModalOpen(true);
   };
 
+  const handleOpenVideoModal = (video?: SiteVideo) => {
+    if (video) {
+      setEditingVideoId(video.id);
+      setVideoFormData({
+        title: video.title,
+        description: video.description,
+        videoUrl: video.videoUrl,
+        posterUrl: video.posterUrl || "",
+        order: video.order,
+        isActive: video.isActive
+      });
+    } else {
+      setEditingVideoId(null);
+      setVideoFormData({
+        title: "",
+        description: "",
+        videoUrl: "",
+        posterUrl: "",
+        order: (settings?.videos?.length || 0) + 1,
+        isActive: true
+      });
+    }
+    setIsVideoModalOpen(true);
+  };
+
+  const handleSaveVideo = () => {
+    if (editingVideoId) {
+      updateVideo(editingVideoId, videoFormData);
+    } else {
+      addVideo({ id: Date.now().toString(), ...videoFormData });
+    }
+    setIsVideoModalOpen(false);
+  };
+
   const handleSave = () => {
     if (editingId) {
       updateCase(editingId, formData);
@@ -101,6 +174,7 @@ export function AdminPanel() {
     { id: "ai_marketing", icon: Sparkles, label: "AI Marketing" },
     { id: "content", icon: FileText, label: t("admin.content", "Content") },
     { id: "instagram", icon: ImageIcon, label: t("admin.instagramConnect", "Instagram Connect") },
+    { id: "settings", icon: Settings, label: "Site Settings" },
     { id: "services", icon: Sparkles, label: t("admin.services") },
     { id: "beforeAfter", icon: ImageIcon, label: t("admin.beforeAfter") },
     { id: "specialists", icon: Users, label: t("admin.specialists") },
@@ -110,8 +184,17 @@ export function AdminPanel() {
     e.preventDefault();
     setLoginError('');
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsAuthenticated(true);
+      } else {
+        setLoginError(data.error || 'Authentication failed');
+      }
     } catch (error: any) {
       console.error("Login failed:", error);
       setLoginError(error.message || 'Authentication failed');
@@ -120,7 +203,8 @@ export function AdminPanel() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setIsAuthenticated(false);
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -145,12 +229,32 @@ export function AdminPanel() {
             <p className="text-graphite/60 text-sm">{t("admin.portalDesc", "Secure access to Avetisyan Beauty Clinic management")}</p>
           </div>
           <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-graphite/60 mb-2">Username</label>
+              <input 
+                type="text" 
+                required
+                value={loginForm.username}
+                onChange={e => setLoginForm({...loginForm, username: e.target.value})}
+                className="w-full px-4 py-3 bg-pearl/50 border border-graphite/10 rounded-xl focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-graphite/60 mb-2">Password</label>
+              <input 
+                type="password" 
+                required
+                value={loginForm.password}
+                onChange={e => setLoginForm({...loginForm, password: e.target.value})}
+                className="w-full px-4 py-3 bg-pearl/50 border border-graphite/10 rounded-xl focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-colors"
+              />
+            </div>
             {loginError && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">{loginError}</div>}
             <button 
               type="submit" 
               className="w-full bg-graphite text-white px-8 py-3.5 rounded-xl hover:bg-gold transition-colors font-medium text-sm tracking-wide mt-4"
             >
-              Sign In with Google
+              Sign In
             </button>
           </form>
         </div>
@@ -402,7 +506,21 @@ export function AdminPanel() {
                   <h1 className="font-display text-3xl text-graphite">
                     {t("admin.services")}
                   </h1>
-                  <button className="flex items-center gap-2 bg-graphite text-white px-5 py-2.5 rounded-full hover:bg-gold transition-colors text-sm font-medium">
+                  <button 
+                    onClick={() => {
+                      const newId = 'service_' + Date.now();
+                      const newService = { id: newId, title: 'New Service', description: 'Description', tag: '', price: '', image_url: '' };
+                      ['hy', 'ru', 'en'].forEach(lang => {
+                        const l = lang as 'hy' | 'ru' | 'en';
+                        const items = [...(content[l]?.services?.items || [])];
+                        items.push(newService);
+                        updateContent(l, 'services', { items });
+                      });
+                      setEditingServiceId(newId);
+                      setEditingServiceData(newService);
+                    }}
+                    className="flex items-center gap-2 bg-graphite text-white px-5 py-2.5 rounded-full hover:bg-gold transition-colors text-sm font-medium"
+                  >
                     <Plus size={16} />
                     {t("admin.addNewService")}
                   </button>
@@ -411,7 +529,7 @@ export function AdminPanel() {
                 <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-graphite/5">
                   <div className="space-y-4">
                     {(content['hy']?.services?.items || []).map((s, i) => (
-                      <div key={i} className="flex flex-col p-4 border border-graphite/10 rounded-2xl hover:border-gold/30 transition-colors gap-4">
+                      <div key={s.id} className="flex flex-col p-4 border border-graphite/10 rounded-2xl hover:border-gold/30 transition-colors gap-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between">
                           <div className="flex items-center gap-4">
                             {s.image_url ? (
@@ -422,32 +540,73 @@ export function AdminPanel() {
                               </div>
                             )}
                             <h4 className="font-medium text-lg text-graphite">{s.title}</h4>
+                            {s.price && <span className="text-sm text-gold ml-2">{s.price}</span>}
                           </div>
                           <div className="flex items-center gap-6">
                             <div className="flex gap-2">
                               <button 
                                 onClick={() => {
                                   setEditingServiceId(editingServiceId === s.id ? null : s.id);
-                                  setEditingServiceImageUrl(s.image_url || '');
+                                  setEditingServiceData({ ...s });
                                 }}
                                 className="p-2 text-graphite/40 hover:text-gold transition-colors"
                               >
                                 <Edit2 size={20} />
                               </button>
-                              <button className="p-2 text-graphite/40 hover:text-red-500 transition-colors"><Trash2 size={20} /></button>
+                              <button 
+                                onClick={() => {
+                                  if (window.confirm("Delete this service?")) {
+                                    ['hy', 'ru', 'en'].forEach(lang => {
+                                      const items = (content[lang as 'hy' | 'ru' | 'en']?.services?.items || []).filter(item => item.id !== s.id);
+                                      updateContent(lang as 'hy' | 'ru' | 'en', 'services', { items });
+                                    });
+                                  }
+                                }}
+                                className="p-2 text-graphite/40 hover:text-red-500 transition-colors"
+                              >
+                                <Trash2 size={20} />
+                              </button>
                             </div>
                           </div>
                         </div>
-                        {editingServiceId === s.id && (
+                        {editingServiceId === s.id && editingServiceData && (
                           <div className="mt-4 pt-4 border-t border-graphite/5 space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-xs font-medium text-graphite/60 uppercase tracking-widest mb-2">Title</label>
+                                <input 
+                                  type="text" 
+                                  value={editingServiceData.title}
+                                  onChange={(e) => setEditingServiceData({...editingServiceData, title: e.target.value})}
+                                  className="w-full bg-pearl border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-graphite/60 uppercase tracking-widest mb-2">Price</label>
+                                <input 
+                                  type="text" 
+                                  value={editingServiceData.price || ''}
+                                  onChange={(e) => setEditingServiceData({...editingServiceData, price: e.target.value})}
+                                  className="w-full bg-pearl border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
+                                />
+                              </div>
+                              <div className="sm:col-span-2">
+                                <label className="block text-xs font-medium text-graphite/60 uppercase tracking-widest mb-2">Description</label>
+                                <textarea 
+                                  value={editingServiceData.description}
+                                  onChange={(e) => setEditingServiceData({...editingServiceData, description: e.target.value})}
+                                  className="w-full bg-pearl border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 h-24 resize-none"
+                                />
+                              </div>
+                            </div>
                             <div>
                               <label className="block text-xs font-medium text-graphite/60 uppercase tracking-widest mb-2">Image URL or Upload</label>
                               <div className="flex gap-4">
                                 <input 
                                   type="text" 
-                                  value={editingServiceImageUrl}
-                                  onChange={(e) => setEditingServiceImageUrl(e.target.value)}
-                                  className="flex-1 bg-pearl border-none rounded-2xl px-6 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
+                                  value={editingServiceData.image_url || ''}
+                                  onChange={(e) => setEditingServiceData({...editingServiceData, image_url: e.target.value})}
+                                  className="flex-1 bg-pearl border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
                                   placeholder="https://images.unsplash.com/..."
                                 />
                                 <div className="relative flex items-center justify-center">
@@ -459,21 +618,21 @@ export function AdminPanel() {
                                       if (file) {
                                         const reader = new FileReader();
                                         reader.onloadend = () => {
-                                          setEditingServiceImageUrl(reader.result as string);
+                                          setEditingServiceData({...editingServiceData, image_url: reader.result as string});
                                         };
                                         reader.readAsDataURL(file);
                                       }
                                     }}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                   />
-                                  <button className="px-6 py-4 rounded-2xl text-sm font-medium bg-graphite text-white hover:bg-gold transition-colors flex items-center gap-2">
+                                  <button className="px-6 py-3 rounded-xl text-sm font-medium bg-graphite text-white hover:bg-gold transition-colors flex items-center gap-2">
                                     <ImageIcon size={18} />
                                     Upload
                                   </button>
                                 </div>
                               </div>
                             </div>
-                            <div className="flex justify-end gap-2">
+                            <div className="flex justify-end gap-2 mt-4">
                               <button 
                                 onClick={() => setEditingServiceId(null)}
                                 className="px-4 py-2 rounded-xl text-sm font-medium text-graphite/60 hover:bg-graphite/5 transition-colors"
@@ -483,11 +642,16 @@ export function AdminPanel() {
                               <button 
                                 onClick={() => {
                                   ['hy', 'ru', 'en'].forEach(lang => {
-                                    const items = [...(content[lang as 'hy' | 'ru' | 'en']?.services?.items || [])];
+                                    const l = lang as 'hy' | 'ru' | 'en';
+                                    const items = [...(content[l]?.services?.items || [])];
                                     const index = items.findIndex(item => item.id === s.id);
                                     if (index !== -1) {
-                                      items[index] = { ...items[index], image_url: editingServiceImageUrl };
-                                      updateContent(lang as 'hy' | 'ru' | 'en', 'services', { items });
+                                      if (l === 'hy') {
+                                        items[index] = { ...items[index], ...editingServiceData };
+                                      } else {
+                                        items[index] = { ...items[index], image_url: editingServiceData.image_url, price: editingServiceData.price };
+                                      }
+                                      updateContent(l, 'services', { items });
                                     }
                                   });
                                   setEditingServiceId(null);
@@ -617,7 +781,10 @@ export function AdminPanel() {
                           Sync Now
                         </button>
                         <button 
-                          onClick={() => disconnectInstagram()}
+                          onClick={async () => {
+                            await instagramService.removeToken(0);
+                            disconnectInstagram();
+                          }}
                           className="px-6 py-3 rounded-xl border border-red-500/20 text-red-500 font-medium hover:bg-red-50 transition-colors"
                         >
                           Disconnect
@@ -705,6 +872,131 @@ export function AdminPanel() {
                 </div>
 
                 <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-graphite/5 mb-8">
+                  <h3 className="font-display text-xl text-graphite mb-6 flex items-center gap-2">
+                    <Instagram size={24} className="text-gold" /> 
+                    {secondInstagramConnected ? "Second Account Connected" : "Connect Second Account"}
+                  </h3>
+                  
+                  {secondInstagramConnected ? (
+                    <div className="flex flex-col sm:flex-row items-center gap-6 p-6 rounded-2xl bg-pearl border border-gold/20">
+                      <div className="w-16 h-16 rounded-full bg-gold/10 flex items-center justify-center">
+                        <Instagram size={32} className="text-gold" />
+                      </div>
+                      <div className="flex-1 text-center sm:text-left">
+                        <h4 className="font-medium text-graphite text-lg flex items-center justify-center sm:justify-start gap-2">
+                          @{secondInstagramHandle}
+                          <CheckCircle size={16} className="text-green-500" />
+                        </h4>
+                        <p className="text-graphite/60 text-sm mt-1">Successfully synced with Instagram Graph API.</p>
+                      </div>
+                      <div className="flex gap-3">
+                        <button 
+                          onClick={async () => {
+                            setIsSyncingInstagram(true);
+                            try {
+                              const posts = await instagramService.fetchPosts();
+                              if (posts && posts.length > 0) {
+                                setInstagramPosts(posts);
+                                alert("Successfully synced posts from both Instagram accounts!");
+                              }
+                            } catch (error) {
+                              console.error(error);
+                              alert("Failed to sync posts. Check API token.");
+                            } finally {
+                              setIsSyncingInstagram(false);
+                            }
+                          }}
+                          disabled={isSyncingInstagram}
+                          className="px-6 py-3 rounded-xl bg-gold text-white font-medium hover:bg-gold/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {isSyncingInstagram ? <Loader2 size={16} className="animate-spin" /> : <TrendingUp size={16} />}
+                          Sync Now
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            await instagramService.removeToken(1);
+                            disconnectSecondInstagram();
+                          }}
+                          className="px-6 py-3 rounded-xl border border-red-500/20 text-red-500 font-medium hover:bg-red-50 transition-colors"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col md:flex-row gap-6">
+                      <div className="flex-1 space-y-4">
+                        <p className="text-graphite/70 text-sm">
+                          Connect a second Instagram account to merge posts into the carousel.
+                        </p>
+                        <div>
+                          <label className="block text-xs font-medium text-graphite/60 mb-2">Second Instagram Handle</label>
+                          <input 
+                            type="text" 
+                            value={tempSecondInstaHandle}
+                            onChange={e => setTempSecondInstaHandle(e.target.value)}
+                            placeholder="@username"
+                            className="w-full max-w-md border border-graphite/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gold mb-4"
+                          />
+                          <label className="block text-xs font-medium text-graphite/60 mb-2">Long-Lived Access Token</label>
+                          <input 
+                            type="password" 
+                            id="secondInstaToken"
+                            placeholder="IGQ..."
+                            className="w-full max-w-md border border-graphite/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gold"
+                          />
+                        </div>
+                        <button 
+                          onClick={async () => {
+                            if (!tempSecondInstaHandle) return;
+                            const tokenInput = (document.getElementById('secondInstaToken') as HTMLInputElement)?.value;
+                            if (!tokenInput) {
+                              alert("Please enter the access token");
+                              return;
+                            }
+                            
+                            setIsConnectingSecondInstagram(true);
+                            try {
+                              const success = await instagramService.saveToken(tokenInput, 1);
+                              if (success) {
+                                connectSecondInstagram(tempSecondInstaHandle.replace('@', ''));
+                                setTempSecondInstaHandle('');
+                                (document.getElementById('secondInstaToken') as HTMLInputElement).value = '';
+                                
+                                // Auto sync after connect
+                                const posts = await instagramService.fetchPosts();
+                                if (posts && posts.length > 0) {
+                                  setInstagramPosts(posts);
+                                }
+                              } else {
+                                alert("Failed to save token");
+                              }
+                            } catch (error) {
+                              console.error(error);
+                              alert("Error connecting");
+                            } finally {
+                              setIsConnectingSecondInstagram(false);
+                            }
+                          }}
+                          disabled={!tempSecondInstaHandle || isConnectingSecondInstagram}
+                          className="flex items-center gap-2 bg-gold text-white px-6 py-3 rounded-xl hover:bg-gold/90 transition-colors font-medium disabled:opacity-50"
+                        >
+                          {isConnectingSecondInstagram ? (
+                            <>
+                              <Loader2 size={18} className="animate-spin" /> Connecting...
+                            </>
+                          ) : (
+                            <>
+                              <Instagram size={18} /> Connect 2nd Account
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-graphite/5 mb-8">
                   <h3 className="font-display text-xl text-graphite mb-4 flex items-center gap-2">
                     <ImageIcon size={20} className="text-gold" /> {t("admin.manageCarousel", "Manage Carousel Posts")}
                   </h3>
@@ -759,32 +1051,267 @@ export function AdminPanel() {
               </div>
             )}
 
+            {activeTab === "settings" && (
+              <div>
+                <div className="flex justify-between items-center mb-8">
+                  <h1 className="font-display text-3xl text-graphite">
+                    Site Settings
+                  </h1>
+                </div>
+
+                <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-graphite/5 mb-8">
+                  <h3 className="font-display text-xl text-graphite mb-4 flex items-center gap-2">
+                    <Settings size={20} className="text-gold" /> WhatsApp Settings
+                  </h3>
+                  <div className="max-w-md space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-graphite/60 mb-1">WhatsApp Number</label>
+                      <input 
+                        type="text" 
+                        value={waNumberInput}
+                        onChange={e => setWaNumberInput(e.target.value)}
+                        placeholder="+37433101077"
+                        className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
+                      />
+                      <p className="text-xs text-graphite/50 mt-1">Include country code. Example: +37433101077</p>
+                    </div>
+                    <button 
+                      onClick={async () => {
+                        setIsWaSaving(true);
+                        setWaSaveSuccess(false);
+                        await updateWhatsapp(waNumberInput);
+                        setIsWaSaving(false);
+                        setWaSaveSuccess(true);
+                        setTimeout(() => setWaSaveSuccess(false), 3000);
+                      }}
+                      disabled={isWaSaving}
+                      className="bg-graphite text-white px-6 py-2.5 rounded-xl hover:bg-gold transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isWaSaving ? <Loader2 size={16} className="animate-spin" /> : null}
+                      {waSaveSuccess ? 'Saved!' : 'Save Number'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-graphite/5">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-display text-xl text-graphite flex items-center gap-2">
+                      <Video size={20} className="text-gold" /> Video Gallery
+                    </h3>
+                    <button 
+                      onClick={() => handleOpenVideoModal()}
+                      className="flex items-center gap-2 bg-graphite text-white px-4 py-2 rounded-xl hover:bg-gold transition-colors text-sm font-medium"
+                    >
+                      <Plus size={16} /> Add Video
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {settings?.videos?.map(video => (
+                      <div key={video.id} className={`border border-graphite/10 rounded-2xl p-4 flex flex-col gap-4 ${!video.isActive ? 'opacity-60' : ''}`}>
+                        <div className="aspect-video bg-black rounded-xl overflow-hidden relative">
+                          <video src={video.videoUrl} poster={video.posterUrl} className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-graphite truncate">{video.title || 'Untitled'}</h4>
+                          <p className="text-sm text-graphite/60 line-clamp-2 mt-1">{video.description}</p>
+                        </div>
+                        <div className="flex items-center justify-between mt-auto pt-4 border-t border-graphite/5">
+                          <span className="text-xs text-graphite/50 font-medium tracking-widest uppercase">Order: {video.order}</span>
+                          <div className="flex gap-2">
+                            <button onClick={() => updateVideo(video.id, { isActive: !video.isActive })} className="p-2 text-graphite/60 hover:text-gold bg-pearl rounded-lg">
+                              {video.isActive ? 'Hide' : 'Show'}
+                            </button>
+                            <button onClick={() => handleOpenVideoModal(video)} className="p-2 text-graphite/60 hover:text-gold bg-pearl rounded-lg">
+                              <Edit2 size={16} />
+                            </button>
+                            <button onClick={() => { if(window.confirm('Delete this video?')) deleteVideo(video.id); }} className="p-2 text-graphite/60 hover:text-red-500 bg-pearl rounded-lg">
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {(!settings?.videos || settings.videos.length === 0) && (
+                      <div className="col-span-full py-12 text-center text-graphite/40">
+                        No videos added yet
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === "specialists" && (
               <div>
                 <div className="flex justify-between items-center mb-8">
                   <h1 className="font-display text-3xl text-graphite">
                     {t("admin.specialists")}
                   </h1>
-                  <button className="flex items-center gap-2 bg-graphite text-white px-5 py-2.5 rounded-full hover:bg-gold transition-colors text-sm font-medium">
+                  <button 
+                    onClick={() => {
+                      const newId = 'spec_' + Date.now();
+                      const newSpec = { id: newId, name: 'New Specialist', role: 'Role', exp: '0 Years', spec: 'Specialization', image: '' };
+                      ['hy', 'ru', 'en'].forEach(lang => {
+                        const l = lang as 'hy' | 'ru' | 'en';
+                        const items = [...(content[l]?.specialists?.items || [])];
+                        items.push(newSpec);
+                        updateContent(l, 'specialists', { items });
+                      });
+                      setEditingSpecialistId(newId);
+                      setEditingSpecialistData(newSpec);
+                    }}
+                    className="flex items-center gap-2 bg-graphite text-white px-5 py-2.5 rounded-full hover:bg-gold transition-colors text-sm font-medium"
+                  >
                     <Plus size={16} />
                     {t("admin.addNewSpecialist")}
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(content['hy']?.specialists?.items || []).map((s, i) => (
-                    <div key={i} className="bg-white rounded-[2rem] p-6 shadow-sm border border-graphite/5 flex flex-col items-center text-center group hover:border-gold/30 transition-all">
-                      <div className="w-24 h-24 rounded-full bg-pearl mb-4 overflow-hidden border-2 border-transparent group-hover:border-gold/30 transition-colors">
-                        <img src={`https://i.pravatar.cc/150?img=${i + 10}`} alt={s.name} className="w-full h-full object-cover" />
-                      </div>
-                      <h4 className="font-medium text-lg text-graphite">{s.name}</h4>
-                      <p className="text-sm text-gold mt-1">{s.role}</p>
-                      <p className="text-xs text-graphite/50 mt-2 uppercase tracking-widest">{s.exp}</p>
-                      <p className="text-xs text-graphite/60 mt-1">{s.spec}</p>
-                      <div className="flex gap-2 mt-6 w-full pt-4 border-t border-graphite/5 justify-center">
-                        <button className="p-2 text-graphite/40 hover:text-gold transition-colors"><Edit2 size={18} /></button>
-                        <button className="p-2 text-graphite/40 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
-                      </div>
+                <div className="space-y-6">
+                  {(content['hy']?.specialists?.items || []).map((s) => (
+                    <div key={s.id} className="bg-white rounded-[2rem] p-6 shadow-sm border border-graphite/5 transition-all">
+                      {!editingSpecialistId || editingSpecialistId !== s.id ? (
+                        <div className="flex flex-col md:flex-row items-center gap-6">
+                          <div className="w-24 h-24 rounded-full bg-pearl overflow-hidden border-2 border-transparent">
+                            <img src={s.image || `https://i.pravatar.cc/150?u=${s.id}`} alt={s.name} className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1 text-center md:text-left">
+                            <h4 className="font-medium text-lg text-graphite">{s.name}</h4>
+                            <p className="text-sm text-gold mt-1">{s.role}</p>
+                            <p className="text-xs text-graphite/50 mt-2 uppercase tracking-widest">{s.exp}</p>
+                            <p className="text-xs text-graphite/60 mt-1">{s.spec}</p>
+                          </div>
+                          <div className="flex gap-2 w-full md:w-auto pt-4 md:pt-0 border-t md:border-t-0 border-graphite/5 justify-center">
+                            <button 
+                              onClick={() => {
+                                setEditingSpecialistId(s.id);
+                                setEditingSpecialistData({...s});
+                              }}
+                              className="p-3 text-graphite/40 hover:text-gold hover:bg-gold/10 rounded-xl transition-colors"
+                            >
+                              <Edit2 size={18} />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                if (window.confirm("Delete this specialist?")) {
+                                  ['hy', 'ru', 'en'].forEach(lang => {
+                                    const l = lang as 'hy' | 'ru' | 'en';
+                                    const items = (content[l]?.specialists?.items || []).filter(item => item.id !== s.id);
+                                    updateContent(l, 'specialists', { items });
+                                  });
+                                }
+                              }}
+                              className="p-3 text-graphite/40 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-graphite/60 uppercase tracking-widest mb-2">Name</label>
+                              <input 
+                                type="text" 
+                                value={editingSpecialistData.name}
+                                onChange={(e) => setEditingSpecialistData({...editingSpecialistData, name: e.target.value})}
+                                className="w-full bg-pearl border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-graphite/60 uppercase tracking-widest mb-2">Role</label>
+                              <input 
+                                type="text" 
+                                value={editingSpecialistData.role}
+                                onChange={(e) => setEditingSpecialistData({...editingSpecialistData, role: e.target.value})}
+                                className="w-full bg-pearl border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-graphite/60 uppercase tracking-widest mb-2">Experience</label>
+                              <input 
+                                type="text" 
+                                value={editingSpecialistData.exp}
+                                onChange={(e) => setEditingSpecialistData({...editingSpecialistData, exp: e.target.value})}
+                                className="w-full bg-pearl border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-graphite/60 uppercase tracking-widest mb-2">Specialization</label>
+                              <input 
+                                type="text" 
+                                value={editingSpecialistData.spec}
+                                onChange={(e) => setEditingSpecialistData({...editingSpecialistData, spec: e.target.value})}
+                                className="w-full bg-pearl border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-graphite/60 uppercase tracking-widest mb-2">Image URL or Upload</label>
+                            <div className="flex gap-4">
+                              <input 
+                                type="text" 
+                                value={editingSpecialistData.image || ''}
+                                onChange={(e) => setEditingSpecialistData({...editingSpecialistData, image: e.target.value})}
+                                className="flex-1 bg-pearl border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
+                                placeholder="https://images.unsplash.com/..."
+                              />
+                              <div className="relative flex items-center justify-center">
+                                <input 
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      const reader = new FileReader();
+                                      reader.onloadend = () => {
+                                        setEditingSpecialistData({...editingSpecialistData, image: reader.result as string});
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                  }}
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <button className="px-6 py-3 rounded-xl text-sm font-medium bg-graphite text-white hover:bg-gold transition-colors flex items-center gap-2">
+                                  <ImageIcon size={18} />
+                                  Upload
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2 mt-6">
+                            <button 
+                              onClick={() => setEditingSpecialistId(null)}
+                              className="px-4 py-2 rounded-xl text-sm font-medium text-graphite/60 hover:bg-graphite/5 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button 
+                              onClick={() => {
+                                ['hy', 'ru', 'en'].forEach(lang => {
+                                  const l = lang as 'hy' | 'ru' | 'en';
+                                  const items = [...(content[l]?.specialists?.items || [])];
+                                  const index = items.findIndex(item => item.id === s.id);
+                                  if (index !== -1) {
+                                    if (l === 'hy') {
+                                      items[index] = { ...items[index], ...editingSpecialistData };
+                                    } else {
+                                      items[index] = { ...items[index], image: editingSpecialistData.image };
+                                    }
+                                    updateContent(l, 'specialists', { items });
+                                  }
+                                });
+                                setEditingSpecialistId(null);
+                              }}
+                              className="px-4 py-2 rounded-xl text-sm font-medium bg-gold text-white hover:bg-gold/90 transition-colors"
+                            >
+                              Save Changes
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -903,6 +1430,100 @@ export function AdminPanel() {
                 className="flex-1 bg-pearl text-graphite py-3 rounded-full hover:bg-graphite/5 transition-colors font-medium"
               >
                 {t("admin.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal for Video Gallery */}
+      {isVideoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-graphite/20 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-[2rem] p-8 shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-display text-2xl">
+                {editingVideoId ? "Edit Video" : "Add Video"}
+              </h3>
+              <button onClick={() => setIsVideoModalOpen(false)} className="text-graphite/40 hover:text-graphite">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-graphite/60 mb-1">Title</label>
+                <input 
+                  type="text"
+                  value={videoFormData.title}
+                  onChange={(e) => setVideoFormData({...videoFormData, title: e.target.value})}
+                  className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-graphite/60 mb-1">Description</label>
+                <textarea 
+                  value={videoFormData.description}
+                  onChange={(e) => setVideoFormData({...videoFormData, description: e.target.value})}
+                  className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
+                  rows={2}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-graphite/60 mb-1">Video URL (mp4, webm)</label>
+                <input 
+                  type="text"
+                  value={videoFormData.videoUrl}
+                  onChange={(e) => setVideoFormData({...videoFormData, videoUrl: e.target.value})}
+                  className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
+                  placeholder="https://example.com/video.mp4"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-graphite/60 mb-1">Poster Image URL (Optional)</label>
+                <input 
+                  type="text"
+                  value={videoFormData.posterUrl}
+                  onChange={(e) => setVideoFormData({...videoFormData, posterUrl: e.target.value})}
+                  className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-graphite/60 mb-1">Order Index</label>
+                  <input 
+                    type="number"
+                    value={videoFormData.order}
+                    onChange={(e) => setVideoFormData({...videoFormData, order: parseInt(e.target.value) || 0})}
+                    className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
+                  />
+                </div>
+                <div className="flex items-center pt-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox"
+                      checked={videoFormData.isActive}
+                      onChange={(e) => setVideoFormData({...videoFormData, isActive: e.target.checked})}
+                      className="w-5 h-5 rounded border-gray-300 text-gold focus:ring-gold"
+                    />
+                    <span className="text-sm font-medium text-graphite/80">Active</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 flex gap-4">
+              <button 
+                onClick={handleSaveVideo}
+                className="flex-1 bg-graphite text-white py-3 rounded-full hover:bg-gold transition-colors font-medium"
+              >
+                Save Video
+              </button>
+              <button 
+                onClick={() => setIsVideoModalOpen(false)}
+                className="flex-1 bg-pearl text-graphite py-3 rounded-full hover:bg-graphite/5 transition-colors font-medium"
+              >
+                Cancel
               </button>
             </div>
           </div>

@@ -224,7 +224,7 @@ const resources = {
         "desc": "Ոչ ինվազիվ էսթետիկ բժշկության գագաթնակետը: Համատեղելով առաջադեմ տեխնոլոգիաները ճարպարապետական էլեգանտության հետ:",
         "treatments": "Պրոցեդուրաներ",
         "contact": "Կապ",
-        "address": "Երևան, Հայաստան \n Պրեմիում Բժշկական Թաղամաս",
+        "address": "Ք. Երևան, Ամիրյան 18",
         "rights": "© 2027 Avetisyan Beauty Clinic: Բոլոր իրավունքները պաշտպանված են:",
         "privacy": "Գաղտնիության քաղաքականություն",
         "terms": "Ծառայությունների մատուցման պայմաններ"
@@ -522,7 +522,7 @@ const resources = {
         "desc": "Вершина неинвазивной эстетической медицины. Сочетание передовых технологий с архитектурной элегантностью.",
         "treatments": "Процедуры",
         "contact": "Контакты",
-        "address": "Ереван, Армения \n Премиум Медицинский Район",
+        "address": "г. Ереван, ул. Амиряна 18",
         "rights": "© 2027 Avetisyan Beauty Clinic. Все права защищены.",
         "privacy": "Политика конфиденциальности",
         "terms": "Условия использования"
@@ -820,7 +820,7 @@ const resources = {
         "desc": "The pinnacle of non-invasive aesthetic medicine. Blending advanced technology with architectural elegance.",
         "treatments": "Treatments",
         "contact": "Contact",
-        "address": "Yerevan, Armenia \n Premium Medical District",
+        "address": "Yerevan, 18 Amiryan St.",
         "rights": "© 2027 Avetisyan Beauty Clinic. All rights reserved.",
         "privacy": "Privacy Policy",
         "terms": "Terms of Service"

@@ -67,10 +67,7 @@ export function ServicesSection() {
                 {/* Subtle background glow on hover */}
                 <div className="absolute inset-0 bg-gradient-to-br from-gold/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
 
-                <div className="flex justify-between items-start mb-12 relative z-10">
-                  <span className="inline-block px-3 py-1 bg-pearl rounded-full text-xs text-graphite/50 tracking-widest uppercase">
-                    {service.tag}
-                  </span>
+                <div className="flex justify-end items-start mb-12 relative z-10">
                   <div className="w-12 h-12 rounded-full border border-graphite/10 flex items-center justify-center group-hover:bg-gold group-hover:text-white group-hover:border-gold transition-all duration-300 shrink-0 ml-4">
                     <ArrowUpRight
                       size={20}
@@ -80,9 +77,14 @@ export function ServicesSection() {
                 </div>
 
                 <div className="relative z-10 mt-auto">
-                  <h4 className="font-display text-3xl text-graphite mb-4 group-hover:text-gold transition-colors duration-300">
-                    {service.title}
-                  </h4>
+                  <div className="flex justify-between items-start mb-4">
+                    <h4 className="font-display text-3xl text-graphite group-hover:text-gold transition-colors duration-300">
+                      {service.title}
+                    </h4>
+                    {service.price && (
+                      <span className="text-gold font-medium text-xl shrink-0 ml-4">{service.price}</span>
+                    )}
+                  </div>
                   <p className="text-graphite/60 font-light leading-relaxed max-w-md">
                     {service.description}
                   </p>
