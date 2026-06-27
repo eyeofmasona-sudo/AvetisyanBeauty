@@ -45,10 +45,10 @@ export function SpecialistsSection() {
               className="group cursor-pointer"
             >
               <div
-                className={`relative w-full aspect-[3/4] ${spec.image?.startsWith('http') ? 'bg-pearl' : spec.image || 'bg-graphite/10'} rounded-3xl overflow-hidden mb-8 border border-graphite/5 bg-cover bg-center`}
-                style={spec.image?.startsWith('http') ? { backgroundImage: `url(${spec.image})` } : {}}
+                className={`relative w-full aspect-[3/4] ${spec.image?.startsWith('http') || spec.image?.startsWith('data:image') ? 'bg-pearl' : spec.image || 'bg-graphite/10'} rounded-3xl overflow-hidden mb-8 border border-graphite/5 bg-cover bg-center`}
+                style={spec.image?.startsWith('http') || spec.image?.startsWith('data:image') ? { backgroundImage: `url(${spec.image})` } : {}}
               >
-                <div className="absolute inset-0 bg-gradient-to-t from-graphite/60 to-transparent opacity-80" />
+                <div className="absolute inset-0 bg-gradient-to-t from-graphite/90 via-graphite/20 to-transparent opacity-90" />
 
                 {/* Play Button Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
@@ -59,28 +59,28 @@ export function SpecialistsSection() {
 
                 <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
                   <div className="flex gap-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
-                    <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] uppercase tracking-widest text-white/90">
+                    <span className="px-3 py-1 bg-black/40 backdrop-blur-md rounded-full text-[10px] uppercase tracking-widest text-white/90 border border-white/10">
                       {t("specialists.diplomas")}
                     </span>
-                    <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] uppercase tracking-widest text-white/90">
+                    <span className="px-3 py-1 bg-black/40 backdrop-blur-md rounded-full text-[10px] uppercase tracking-widest text-white/90 border border-white/10">
                       {t("specialists.certificates")}
                     </span>
                   </div>
-                  <h4 className="font-display text-2xl text-white font-medium mb-1 drop-shadow-md">
+                  <h4 className="font-display text-3xl text-white font-medium mb-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                     {spec.name}
                   </h4>
-                  <p className="text-gold text-sm tracking-widest uppercase drop-shadow-md">
+                  <p className="text-gold text-sm tracking-widest uppercase font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                     {spec.role}
                   </p>
                 </div>
               </div>
 
-              <div className="flex justify-between items-center px-2">
+              <div className="flex justify-between items-center px-4 py-2 mt-2 bg-white rounded-2xl shadow-sm border border-graphite/5 group-hover:shadow-md transition-shadow">
                 <div>
-                  <p className="text-graphite/60 font-light">{spec.spec}</p>
+                  <p className="text-graphite font-medium text-lg tracking-wide">{spec.spec}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-graphite/80 font-medium font-display">
+                  <p className="text-gold font-display text-lg font-semibold tracking-wider">
                     {spec.exp}
                   </p>
                 </div>
