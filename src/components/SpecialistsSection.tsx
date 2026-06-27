@@ -46,7 +46,7 @@ export function SpecialistsSection() {
             >
               <div
                 className="relative w-full aspect-[3/4] bg-pearl rounded-3xl overflow-hidden border border-graphite/5 bg-cover bg-center mb-4"
-                style={{ backgroundImage: `url("${spec.image || defaultContent['hy'].specialists.items.find(s => s.id === spec.id)?.image}")` }}
+                style={spec.image || defaultContent['hy'].specialists.items.find(s => s.id === spec.id)?.image ? { backgroundImage: `url("${spec.image || defaultContent['hy'].specialists.items.find(s => s.id === spec.id)?.image}")` } : undefined}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-graphite/90 via-graphite/20 to-transparent opacity-90" />
 

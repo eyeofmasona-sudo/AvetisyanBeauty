@@ -25,7 +25,7 @@ export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const videoSrc = (isMobile && settings.heroVideoMobileUrl) ? settings.heroVideoMobileUrl : (settings.heroVideoUrl || "/videos/hero-background.mp4");
+  const videoSrc = (isMobile && settings?.heroVideoMobileUrl) ? settings.heroVideoMobileUrl : (settings?.heroVideoUrl || "/videos/hero-background.mp4");
 
   useEffect(() => {
     if (!videoRef.current) return;
@@ -52,13 +52,13 @@ export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
         loop
         playsInline
         preload="auto"
-        src={videoSrc || undefined}
+        src={videoSrc}
         poster="/images/hero-poster.webp"
         onError={(e) => {
           const target = e.target as HTMLVideoElement;
-          // Only fallback if not already the default to prevent infinite loop
-          if (target.src && !target.src.includes("/videos/hero-background")) {
-             target.src = isMobile ? "/videos/hero-background-mobile.mp4" : "/videos/hero-background.mp4";
+          // Only fallback if not already the exact default to prevent infinite loop
+          if (target.src && !target.src.endsWith("/videos/hero-background.mp4")) {
+             target.src = "/videos/hero-background.mp4";
              target.load();
              target.play().catch(console.error);
           }

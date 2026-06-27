@@ -24,7 +24,7 @@ const defaultSettings: SiteSettings = {
   whatsappNumber: '+37433101077',
   videos: [],
   heroVideoUrl: '/videos/hero-background.mp4',
-  heroVideoMobileUrl: '/videos/hero-background-mobile.mp4'
+  heroVideoMobileUrl: '/videos/hero-background.mp4'
 };
 
 interface SettingsState {

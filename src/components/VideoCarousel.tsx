@@ -20,14 +20,18 @@ export function VideoCarousel() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {videos.map((video, idx) => (
             <div key={idx} className="aspect-[9/16] bg-black rounded-2xl overflow-hidden relative shadow-2xl">
-              <video
-                src={video.videoUrl || undefined}
-                poster={video.posterUrl || undefined}
-                className="w-full h-full object-contain"
-                controls
-                playsInline
-                preload="metadata"
-              />
+              {video.videoUrl ? (
+                <video
+                  src={video.videoUrl}
+                  poster={video.posterUrl || undefined}
+                  className="w-full h-full object-contain"
+                  controls
+                  playsInline
+                  preload="metadata"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white/50 text-sm">No video source</div>
+              )}
               {(video.title || video.description) && (
                 <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent text-white pointer-events-none">
                   {video.title && <h3 className="text-xl font-bold mb-2">{video.title}</h3>}

@@ -41,7 +41,7 @@ export function AdminPanel() {
   const [waSaveSuccess, setWaSaveSuccess] = useState(false);
   
   const [heroVideoInput, setHeroVideoInput] = useState(settings?.heroVideoUrl || "/videos/hero-background.mp4");
-  const [heroVideoMobileInput, setHeroVideoMobileInput] = useState(settings?.heroVideoMobileUrl || "/videos/hero-background-mobile.mp4");
+  const [heroVideoMobileInput, setHeroVideoMobileInput] = useState(settings?.heroVideoMobileUrl || "/videos/hero-background.mp4");
   const [isHeroSaving, setIsHeroSaving] = useState(false);
   const [heroSaveSuccess, setHeroSaveSuccess] = useState(false);
 
@@ -57,18 +57,30 @@ export function AdminPanel() {
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
 
   const uploadFile = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      credentials: 'include',
-      body: formData
-    });
-    if (!response.ok) {
-      throw new Error('Upload failed');
+    try {
+      const { storage } = await import('../lib/firebase');
+      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+      const fileName = `uploads/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      const storageRef = ref(storage, fileName);
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      return downloadURL;
+    } catch (e: any) {
+      console.error("Firebase upload error:", e);
+      // Fallback to local server upload if Firebase storage fails (e.g., missing bucket/permissions)
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      const data = await response.json();
+      return data.url;
     }
-    const data = await response.json();
-    return data.url;
   };
 
   useEffect(() => {

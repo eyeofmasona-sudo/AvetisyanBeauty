@@ -693,25 +693,8 @@ async function startServer() {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
-      // Initialize bucket
-      const bucket = getStorage(firebaseAdminApp).bucket('gen-lang-client-0533202242.firebasestorage.app');
-      const filename = `uploads/${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-      
-      const fileUpload = bucket.file(filename);
-      await fileUpload.save(fs.readFileSync(req.file.path), {
-        metadata: { contentType: req.file.mimetype }
-      });
-      await fileUpload.makePublic();
-      
-      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
-      
-      // Cleanup local file
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
-
       // Return the public URL for the uploaded file
-      res.json({ url: publicUrl });
+      res.json({ url: `/uploads/${req.file.filename}` });
     } catch (e) {
       console.error("Upload error", e);
       res.status(500).json({ error: "Upload failed" });
