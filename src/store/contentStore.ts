@@ -49,7 +49,7 @@ export type LocalizedContent = {
   [key in 'hy' | 'ru' | 'en']: SiteContent;
 };
 
-const defaultContent: LocalizedContent = {
+export const defaultContent: LocalizedContent = {
   hy: {
     hero: {
       title: "Ultraformer III և Golden Sun ծառայություններ",
@@ -217,7 +217,8 @@ export const loadContentFromDB = async () => {
 
 export const saveContentToDB = async (content: LocalizedContent) => {
   try {
-    await setDoc(doc(db, 'site', 'content'), content, { merge: true });
+    const cleanContent = JSON.parse(JSON.stringify(content));
+    await setDoc(doc(db, 'site', 'content'), cleanContent, { merge: true });
   } catch (e) {
     console.error("Failed to save content to DB", e);
     throw e;

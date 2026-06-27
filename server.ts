@@ -6,6 +6,7 @@ import multer from "multer";
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import { getStorage } from 'firebase-admin/storage';
 
 // Initialize Firebase Admin
 let firebaseAdminApp;
@@ -678,7 +679,7 @@ async function startServer() {
   // Expose public folder statically (for uploads)
   app.use('/uploads', express.static(uploadsDir));
 
-  app.post("/api/upload", upload.single('file'), (req, res) => {
+  app.post("/api/upload", upload.single('file'), async (req, res) => {
     try {
       const token = req.cookies?.admin_token;
       if (!token) {
@@ -692,15 +693,32 @@ async function startServer() {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
+      // Initialize bucket
+      const bucket = getStorage(firebaseAdminApp).bucket('gen-lang-client-0533202242.firebasestorage.app');
+      const filename = `uploads/${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      
+      const fileUpload = bucket.file(filename);
+      await fileUpload.save(fs.readFileSync(req.file.path), {
+        metadata: { contentType: req.file.mimetype }
+      });
+      await fileUpload.makePublic();
+      
+      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+      
+      // Cleanup local file
+      if (fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+
       // Return the public URL for the uploaded file
-      res.json({ url: `/uploads/${req.file.filename}` });
+      res.json({ url: publicUrl });
     } catch (e) {
       console.error("Upload error", e);
       res.status(500).json({ error: "Upload failed" });
     }
   });
 
-  app.delete("/api/upload", (req, res) => {
+  app.delete("/api/upload", async (req, res) => {
     try {
       const token = req.cookies?.admin_token;
       if (!token) {
@@ -712,11 +730,19 @@ async function startServer() {
       const { url } = req.body;
       if (!url) return res.status(400).json({ error: "No URL provided" });
 
-      const fileName = url.split('/').pop();
-      if (fileName) {
-        const filePath = path.join(uploadsDir, fileName);
-        if (fs.existsSync(filePath)) {
-           fs.unlinkSync(filePath);
+      if (url.includes('storage.googleapis.com')) {
+         const filename = url.split('/').pop();
+         if (filename) {
+           const bucket = getStorage(firebaseAdminApp).bucket('gen-lang-client-0533202242.firebasestorage.app');
+           await bucket.file(`uploads/${filename}`).delete().catch(console.error);
+         }
+      } else {
+        const fileName = url.split('/').pop();
+        if (fileName) {
+          const filePath = path.join(uploadsDir, fileName);
+          if (fs.existsSync(filePath)) {
+             fs.unlinkSync(filePath);
+          }
         }
       }
       res.json({ success: true });

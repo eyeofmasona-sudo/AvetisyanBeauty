@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { PlayCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useContentStore } from '../store/contentStore';
+import { useContentStore, defaultContent } from '../store/contentStore';
 import { useParams } from 'react-router-dom';
 
 export function SpecialistsSection() {
@@ -46,7 +46,7 @@ export function SpecialistsSection() {
             >
               <div
                 className="relative w-full aspect-[3/4] bg-pearl rounded-3xl overflow-hidden border border-graphite/5 bg-cover bg-center mb-4"
-                style={{ backgroundImage: spec.image ? `url("${spec.image}")` : undefined }}
+                style={{ backgroundImage: `url("${spec.image || defaultContent['hy'].specialists.items.find(s => s.id === spec.id)?.image}")` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-graphite/90 via-graphite/20 to-transparent opacity-90" />
 

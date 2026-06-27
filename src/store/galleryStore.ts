@@ -69,7 +69,8 @@ export const loadGalleryFromDB = async () => {
 
 export const saveGalleryToDB = async (cases: GalleryCase[]) => {
   try {
-    await setDoc(doc(db, 'site', 'gallery'), { cases }, { merge: true });
+    const cleanCases = JSON.parse(JSON.stringify(cases));
+    await setDoc(doc(db, 'site', 'gallery'), { cases: cleanCases }, { merge: true });
   } catch (e) {
     console.error("Failed to save gallery to DB", e);
     throw e;

@@ -108,7 +108,9 @@ export const useSettingsStore = create<SettingsState>()(
       
       saveToDB: async (settings) => {
         try {
-          await setDoc(doc(db, 'site', 'settings'), settings, { merge: true });
+          // Firebase doesn't allow undefined values, we serialize and deserialize to strip them
+          const cleanSettings = JSON.parse(JSON.stringify(settings));
+          await setDoc(doc(db, 'site', 'settings'), cleanSettings, { merge: true });
         } catch (e) {
           console.error("Failed to save settings to DB", e);
           throw e;

@@ -52,10 +52,18 @@ export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
         loop
         playsInline
         preload="auto"
+        src={videoSrc || undefined}
         poster="/images/hero-poster.webp"
-      >
-        <source src={videoSrc || undefined} type="video/mp4" />
-      </video>
+        onError={(e) => {
+          const target = e.target as HTMLVideoElement;
+          // Only fallback if not already the default to prevent infinite loop
+          if (target.src && !target.src.includes("/videos/hero-background")) {
+             target.src = isMobile ? "/videos/hero-background-mobile.mp4" : "/videos/hero-background.mp4";
+             target.load();
+             target.play().catch(console.error);
+          }
+        }}
+      />
       
       <div className="hero-overlay"></div>
 
