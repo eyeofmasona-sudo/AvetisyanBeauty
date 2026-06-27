@@ -16,16 +16,21 @@ export interface SiteVideo {
 export interface SiteSettings {
   whatsappNumber: string;
   videos: SiteVideo[];
+  heroVideoUrl?: string;
+  heroVideoMobileUrl?: string;
 }
 
 const defaultSettings: SiteSettings = {
   whatsappNumber: '+37433101077',
-  videos: []
+  videos: [],
+  heroVideoUrl: '/videos/hero-background.mp4',
+  heroVideoMobileUrl: '/videos/hero-background-mobile.mp4'
 };
 
 interface SettingsState {
   settings: SiteSettings;
   updateWhatsapp: (number: string) => void;
+  updateHeroVideoUrl: (url: string, mobileUrl?: string) => void;
   addVideo: (video: SiteVideo) => void;
   updateVideo: (id: string, video: Partial<SiteVideo>) => void;
   deleteVideo: (id: string) => void;
@@ -41,6 +46,15 @@ export const useSettingsStore = create<SettingsState>()(
       
       updateWhatsapp: async (number) => {
         const newSettings = { ...get().settings, whatsappNumber: number };
+        set({ settings: newSettings });
+        await get().saveToDB(newSettings);
+      },
+      
+      updateHeroVideoUrl: async (url, mobileUrl) => {
+        const newSettings = { ...get().settings, heroVideoUrl: url };
+        if (mobileUrl !== undefined) {
+          newSettings.heroVideoMobileUrl = mobileUrl;
+        }
         set({ settings: newSettings });
         await get().saveToDB(newSettings);
       },

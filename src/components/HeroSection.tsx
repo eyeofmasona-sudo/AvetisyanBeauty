@@ -1,18 +1,31 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useContentStore } from '../store/contentStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { useParams } from 'react-router-dom';
 
 export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
   const { t } = useTranslation();
   const { lang = 'hy' } = useParams();
   const { content } = useContentStore();
+  const { settings } = useSettingsStore();
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLElement>(null);
   const isInView = useInView(containerRef, { margin: "0px" });
 
   const heroContent = content[lang as 'hy' | 'ru' | 'en']?.hero || content['hy'].hero;
+
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const videoSrc = (isMobile && settings.heroVideoMobileUrl) ? settings.heroVideoMobileUrl : (settings.heroVideoUrl || "/videos/hero-background.mp4");
 
   useEffect(() => {
     if (!videoRef.current) return;
@@ -32,6 +45,7 @@ export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
     >
       <video
         ref={videoRef}
+        key={videoSrc}
         className="hero-video"
         autoPlay
         muted
@@ -40,7 +54,7 @@ export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
         preload="auto"
         poster="/images/hero-poster.webp"
       >
-        <source src="/videos/hero-background.mp4" type="video/mp4" />
+        <source src={videoSrc} type="video/mp4" />
       </video>
       
       <div className="hero-overlay"></div>

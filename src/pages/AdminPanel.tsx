@@ -22,7 +22,7 @@ import { doc, getDoc } from 'firebase/firestore';
 export function AdminPanel() {
   const { t } = useTranslation();
   const { cases, addCase, updateCase, deleteCase } = useGalleryStore();
-  const { settings, updateWhatsapp, addVideo, updateVideo, deleteVideo } = useSettingsStore();
+  const { settings, updateWhatsapp, updateHeroVideoUrl, addVideo, updateVideo, deleteVideo } = useSettingsStore();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,6 +39,17 @@ export function AdminPanel() {
   const [waNumberInput, setWaNumberInput] = useState(settings?.whatsappNumber || "");
   const [isWaSaving, setIsWaSaving] = useState(false);
   const [waSaveSuccess, setWaSaveSuccess] = useState(false);
+  
+  const [heroVideoInput, setHeroVideoInput] = useState(settings?.heroVideoUrl || "/videos/hero-background.mp4");
+  const [heroVideoMobileInput, setHeroVideoMobileInput] = useState(settings?.heroVideoMobileUrl || "/videos/hero-background-mobile.mp4");
+  const [isHeroSaving, setIsHeroSaving] = useState(false);
+  const [heroSaveSuccess, setHeroSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    if (settings?.whatsappNumber) setWaNumberInput(settings.whatsappNumber);
+    if (settings?.heroVideoUrl) setHeroVideoInput(settings.heroVideoUrl);
+    if (settings?.heroVideoMobileUrl) setHeroVideoMobileInput(settings.heroVideoMobileUrl);
+  }, [settings?.whatsappNumber, settings?.heroVideoUrl, settings?.heroVideoMobileUrl]);
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -1089,6 +1100,51 @@ export function AdminPanel() {
                     >
                       {isWaSaving ? <Loader2 size={16} className="animate-spin" /> : null}
                       {waSaveSuccess ? 'Saved!' : 'Save Number'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-graphite/5 mb-8">
+                  <h3 className="font-display text-xl text-graphite mb-4 flex items-center gap-2">
+                    <Video size={20} className="text-gold" /> Hero Video Background
+                  </h3>
+                  <div className="max-w-md space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-graphite/60 mb-1">Desktop Video URL (MP4)</label>
+                      <input 
+                        type="text" 
+                        value={heroVideoInput}
+                        onChange={e => setHeroVideoInput(e.target.value)}
+                        placeholder="https://example.com/video-desktop.mp4"
+                        className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
+                      />
+                      <p className="text-xs text-graphite/50 mt-1">Direct link to an MP4 video file. Used as the main background on desktop.</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-graphite/60 mb-1">Mobile Video URL (MP4)</label>
+                      <input 
+                        type="text" 
+                        value={heroVideoMobileInput}
+                        onChange={e => setHeroVideoMobileInput(e.target.value)}
+                        placeholder="https://example.com/video-mobile.mp4"
+                        className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
+                      />
+                      <p className="text-xs text-graphite/50 mt-1">Direct link to an MP4 video file. Used as the main background on mobile devices.</p>
+                    </div>
+                    <button 
+                      onClick={async () => {
+                        setIsHeroSaving(true);
+                        setHeroSaveSuccess(false);
+                        await updateHeroVideoUrl(heroVideoInput, heroVideoMobileInput);
+                        setIsHeroSaving(false);
+                        setHeroSaveSuccess(true);
+                        setTimeout(() => setHeroSaveSuccess(false), 3000);
+                      }}
+                      disabled={isHeroSaving}
+                      className="bg-graphite text-white px-6 py-2.5 rounded-xl hover:bg-gold transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isHeroSaving ? <Loader2 size={16} className="animate-spin" /> : null}
+                      {heroSaveSuccess ? 'Saved!' : 'Save Video URL'}
                     </button>
                   </div>
                 </div>
