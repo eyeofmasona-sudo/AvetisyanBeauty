@@ -54,7 +54,7 @@ export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
         preload="auto"
         poster="/images/hero-poster.webp"
       >
-        <source src={videoSrc} type="video/mp4" />
+        <source src={videoSrc || undefined} type="video/mp4" />
       </video>
       
       <div className="hero-overlay"></div>

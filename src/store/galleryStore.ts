@@ -16,9 +16,9 @@ export interface GalleryCase {
 
 interface GalleryStore {
   cases: GalleryCase[];
-  addCase: (newCase: Omit<GalleryCase, 'id'>) => void;
-  updateCase: (id: string, updatedCase: Omit<GalleryCase, 'id'>) => void;
-  deleteCase: (id: string) => void;
+  addCase: (newCase: Omit<GalleryCase, 'id'>) => Promise<void>;
+  updateCase: (id: string, updatedCase: Omit<GalleryCase, 'id'>) => Promise<void>;
+  deleteCase: (id: string) => Promise<void>;
 }
 
 const defaultCases: GalleryCase[] = [
@@ -69,31 +69,32 @@ export const loadGalleryFromDB = async () => {
 
 export const saveGalleryToDB = async (cases: GalleryCase[]) => {
   try {
-    await setDoc(doc(db, 'site', 'gallery'), { cases });
+    await setDoc(doc(db, 'site', 'gallery'), { cases }, { merge: true });
   } catch (e) {
     console.error("Failed to save gallery to DB", e);
+    throw e;
   }
 };
 
 export const useGalleryStore = create<GalleryStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       cases: defaultCases,
-      addCase: (newCase) => set((state) => {
-        const newCases = [...state.cases, { ...newCase, id: Date.now().toString() }];
-        saveGalleryToDB(newCases);
-        return { cases: newCases };
-      }),
-      updateCase: (id, updatedCase) => set((state) => {
-        const newCases = state.cases.map(c => c.id === id ? { ...c, ...updatedCase } : c);
-        saveGalleryToDB(newCases);
-        return { cases: newCases };
-      }),
-      deleteCase: (id) => set((state) => {
-        const newCases = state.cases.filter(c => c.id !== id);
-        saveGalleryToDB(newCases);
-        return { cases: newCases };
-      })
+      addCase: async (newCase) => {
+        const newCases = [...get().cases, { ...newCase, id: Date.now().toString() }];
+        set({ cases: newCases });
+        await saveGalleryToDB(newCases);
+      },
+      updateCase: async (id, updatedCase) => {
+        const newCases = get().cases.map(c => c.id === id ? { ...c, ...updatedCase } : c);
+        set({ cases: newCases });
+        await saveGalleryToDB(newCases);
+      },
+      deleteCase: async (id) => {
+        const newCases = get().cases.filter(c => c.id !== id);
+        set({ cases: newCases });
+        await saveGalleryToDB(newCases);
+      }
     }),
     {
       name: 'golden-sun-gallery'

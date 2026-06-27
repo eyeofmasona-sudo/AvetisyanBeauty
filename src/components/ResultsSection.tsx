@@ -4,14 +4,17 @@ import { useTranslation } from "react-i18next";
 import { BeforeAfterSlider } from "./BeforeAfterSlider";
 import { useNavigate, useParams } from "react-router-dom";
 import { useContentStore } from "../store/contentStore";
+import { useGalleryStore } from "../store/galleryStore";
 
 export function ResultsSection() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { lang = 'hy' } = useParams();
   const { content } = useContentStore();
+  const { cases } = useGalleryStore();
 
   const resultsContent = content[lang as 'hy' | 'ru' | 'en']?.results || content['hy'].results;
+  const firstCase = cases && cases.length > 0 ? cases[0] : null;
 
   return (
     <section id="results" className="py-32 bg-white relative z-10">
@@ -35,17 +38,17 @@ export function ResultsSection() {
 
         <div className="relative group">
           <BeforeAfterSlider 
-            beforeImage="https://images.unsplash.com/photo-1515377905703-c4788e51af15?q=80&w=1200&auto=format&fit=crop"
-            afterImage="https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?q=80&w=1200&auto=format&fit=crop"
+            beforeImage={firstCase?.beforeImage || "https://images.unsplash.com/photo-1515377905703-c4788e51af15?q=80&w=1200&auto=format&fit=crop"}
+            afterImage={firstCase?.afterImage || "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?q=80&w=1200&auto=format&fit=crop"}
           />
 
           <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-white/90 via-white/50 to-transparent flex flex-col md:flex-row justify-between items-start md:items-end gap-4 pointer-events-none rounded-b-3xl">
             <div>
               <h4 className="text-graphite font-medium text-xl mb-1 drop-shadow-sm">
-                {t("results.protocol")}
+                {firstCase?.protocol || t("results.protocol")}
               </h4>
               <p className="text-graphite/70 text-sm drop-shadow-sm">
-                {t("results.patient")}
+                {firstCase?.patientDesc || t("results.patient")}
               </p>
             </div>
             <button className="px-6 py-2 bg-white/50 backdrop-blur-md rounded-full text-graphite text-sm font-medium hover:bg-white transition-colors border border-graphite/10 pointer-events-auto shadow-sm">

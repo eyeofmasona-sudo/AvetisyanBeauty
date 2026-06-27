@@ -72,7 +72,7 @@ export function InstagramCarousel() {
                 className="group relative w-[85vw] sm:w-[calc(50%-0.75rem)] md:w-[calc(33.333%-1rem)] lg:w-[calc(25%-1.125rem)] flex-shrink-0 aspect-square overflow-hidden rounded-2xl bg-graphite/5 snap-center sm:snap-start"
               >
                 <img 
-                  src={post.image} 
+                  src={post.image || undefined} 
                   alt="Instagram post" 
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />

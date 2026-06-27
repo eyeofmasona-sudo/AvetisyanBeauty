@@ -53,7 +53,7 @@ export function ServicesSection() {
               {service.image_url ? (
                 <div className="relative h-56 w-full overflow-hidden">
                   <img 
-                    src={service.image_url} 
+                    src={service.image_url || undefined} 
                     alt={service.title} 
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />

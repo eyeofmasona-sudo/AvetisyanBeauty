@@ -194,7 +194,7 @@ interface ContentState {
   instagramHandle: string;
   secondInstagramConnected: boolean;
   secondInstagramHandle: string;
-  updateContent: (lang: 'hy' | 'ru' | 'en', section: keyof SiteContent, data: any) => void;
+  updateContent: (lang: 'hy' | 'ru' | 'en', section: keyof SiteContent, data: any) => Promise<void>;
   updateInstagramPost: (index: number, post: Partial<InstagramPost>) => void;
   setInstagramPosts: (posts: InstagramPost[]) => void;
   connectInstagram: (handle: string) => void;
@@ -217,33 +217,33 @@ export const loadContentFromDB = async () => {
 
 export const saveContentToDB = async (content: LocalizedContent) => {
   try {
-    await setDoc(doc(db, 'site', 'content'), content);
+    await setDoc(doc(db, 'site', 'content'), content, { merge: true });
   } catch (e) {
     console.error("Failed to save content to DB", e);
+    throw e;
   }
 };
 
 export const useContentStore = create<ContentState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       content: defaultContent,
       instagramPosts: defaultInstaPosts,
       instagramConnected: false,
       instagramHandle: '',
       secondInstagramConnected: false,
       secondInstagramHandle: '',
-      updateContent: (lang, section, data) => 
-        set((state) => {
-          const newContent = {
-            ...state.content,
-            [lang]: {
-              ...state.content[lang],
-              [section]: { ...state.content[lang][section], ...data }
-            }
-          };
-          saveContentToDB(newContent);
-          return { content: newContent };
-        }),
+      updateContent: async (lang, section, data) => {
+        const newContent = {
+          ...get().content,
+          [lang]: {
+            ...get().content[lang],
+            [section]: { ...get().content[lang][section], ...data }
+          }
+        };
+        set({ content: newContent });
+        await saveContentToDB(newContent);
+      },
       updateInstagramPost: (index, post) => 
         set((state) => {
           const newPosts = [...state.instagramPosts];

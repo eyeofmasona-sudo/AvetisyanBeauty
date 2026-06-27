@@ -16,7 +16,7 @@ import {
 import { AIPanel } from "../components/AIPanel";
 import { AIAssistantModule } from "../components/AIAssistantModule";
 import { instagramService } from "../services/instagramService";
-import { db } from '../lib/firebase';
+import { db, auth } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
 export function AdminPanel() {
@@ -56,17 +56,33 @@ export function AdminPanel() {
   const [loginError, setLoginError] = useState('');
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
 
+  const uploadFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData
+    });
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+    const data = await response.json();
+    return data.url;
+  };
+
   useEffect(() => {
-    fetch('/api/auth/verify')
-      .then(res => res.json())
-      .then(data => {
-        setIsAuthenticated(data.authenticated);
-        setIsAuthLoading(false);
-      })
-      .catch(() => {
-        setIsAuthenticated(false);
+    import('firebase/auth').then(({ onAuthStateChanged }) => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user && user.email === 'eyeofmasona@gmail.com') {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
         setIsAuthLoading(false);
       });
+      return () => unsubscribe();
+    });
   }, []);
   const [formData, setFormData] = useState<Omit<GalleryCase, 'id'>>({
     protocol: "",
@@ -157,26 +173,69 @@ export function AdminPanel() {
     setIsVideoModalOpen(true);
   };
 
-  const handleSaveVideo = () => {
-    if (editingVideoId) {
-      updateVideo(editingVideoId, videoFormData);
-    } else {
-      addVideo({ id: Date.now().toString(), ...videoFormData });
+  const handleSaveVideo = async () => {
+    try {
+      if (editingVideoId) {
+        await updateVideo(editingVideoId, videoFormData);
+      } else {
+        await addVideo({ id: Date.now().toString(), ...videoFormData });
+      }
+      setIsVideoModalOpen(false);
+      alert("Видео успешно сохранено! / Video successfully saved!");
+    } catch (error) {
+      alert("Ошибка при сохранении видео / Error saving video");
     }
-    setIsVideoModalOpen(false);
   };
 
-  const handleSave = () => {
-    if (editingId) {
-      updateCase(editingId, formData);
-    } else {
-      addCase(formData);
+  const handleSave = async () => {
+    try {
+      if (editingId) {
+        await updateCase(editingId, formData);
+      } else {
+        await addCase(formData);
+      }
+      setIsModalOpen(false);
+      alert("Кейс успешно сохранен! / Case successfully saved!");
+    } catch (error) {
+      alert("Ошибка при сохранении кейса / Error saving case");
     }
-    setIsModalOpen(false);
+  };
+
+  const handleToggleVideoStatus = async (video: SiteVideo) => {
+    try {
+      await updateVideo(video.id, { isActive: !video.isActive });
+      alert("Статус видео обновлен! / Video status updated!");
+    } catch (error) {
+      alert("Ошибка при обновлении статуса видео / Error updating video status");
+    }
+  };
+
+  const handleDeleteVideo = async (id: string) => {
+    if (window.confirm('Delete this video? / Удалить это видео?')) {
+      try {
+        await deleteVideo(id);
+        alert("Видео успешно удалено! / Video successfully deleted!");
+      } catch (error) {
+        alert("Ошибка при удалении видео / Error deleting video");
+      }
+    }
+  };
+
+  const handleDeleteCase = async (id: string) => {
+    if (window.confirm('Delete this case? / Удалить этот кейс?')) {
+      try {
+        await deleteCase(id);
+        alert("Кейс успешно удален! / Case successfully deleted!");
+      } catch (error) {
+        alert("Ошибка при удалении кейса / Error deleting case");
+      }
+    }
   };
 
   const handleContentChange = (lang: 'hy' | 'ru' | 'en', section: keyof typeof content['hy'], field: string, value: string) => {
-    updateContent(lang, section, { [field]: value });
+    updateContent(lang, section, { [field]: value }).catch((e) => {
+      console.error("Error saving content change", e);
+    });
   };
 
   const menuItems = [
@@ -191,20 +250,32 @@ export function AdminPanel() {
     { id: "specialists", icon: Users, label: t("admin.specialists") },
   ];
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
     setLoginError('');
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loginForm)
-      });
-      const data = await res.json();
-      if (data.success) {
-        setIsAuthenticated(true);
+      const { signInWithPopup, GoogleAuthProvider, signOut } = await import('firebase/auth');
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      
+      if (result.user.email === 'eyeofmasona@gmail.com') {
+        const idToken = await result.user.getIdToken();
+        const res = await fetch('/api/auth/login-firebase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken })
+        });
+        const data = await res.json();
+        if (data.success) {
+          setIsAuthenticated(true);
+        } else {
+          setLoginError('Backend auth failed: ' + data.error);
+          await signOut(auth);
+        }
       } else {
-        setLoginError(data.error || 'Authentication failed');
+        setLoginError('Unauthorized email: ' + result.user.email);
+        const { signOut } = await import('firebase/auth');
+        await signOut(auth);
       }
     } catch (error: any) {
       console.error("Login failed:", error);
@@ -214,7 +285,9 @@ export function AdminPanel() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      const { signOut } = await import('firebase/auth');
+      await signOut(auth);
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
       setIsAuthenticated(false);
     } catch (error) {
       console.error("Logout failed:", error);
@@ -239,35 +312,15 @@ export function AdminPanel() {
             <h1 className="font-display text-3xl text-graphite mb-2">{t("admin.portalTitle", "Admin Portal")}</h1>
             <p className="text-graphite/60 text-sm">{t("admin.portalDesc", "Secure access to Avetisyan Beauty Clinic management")}</p>
           </div>
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-graphite/60 mb-2">Username</label>
-              <input 
-                type="text" 
-                required
-                value={loginForm.username}
-                onChange={e => setLoginForm({...loginForm, username: e.target.value})}
-                className="w-full px-4 py-3 bg-pearl/50 border border-graphite/10 rounded-xl focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-graphite/60 mb-2">Password</label>
-              <input 
-                type="password" 
-                required
-                value={loginForm.password}
-                onChange={e => setLoginForm({...loginForm, password: e.target.value})}
-                className="w-full px-4 py-3 bg-pearl/50 border border-graphite/10 rounded-xl focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-colors"
-              />
-            </div>
+          <div className="space-y-6">
             {loginError && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">{loginError}</div>}
             <button 
-              type="submit" 
+              onClick={handleLogin} 
               className="w-full bg-graphite text-white px-8 py-3.5 rounded-xl hover:bg-gold transition-colors font-medium text-sm tracking-wide mt-4"
             >
-              Sign In
+              Sign In with Google
             </button>
-          </form>
+          </div>
         </div>
       </div>
     );
@@ -544,7 +597,7 @@ export function AdminPanel() {
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between">
                           <div className="flex items-center gap-4">
                             {s.image_url ? (
-                              <img src={s.image_url} alt={s.title} className="w-16 h-16 object-cover rounded-xl" />
+                              <img src={s.image_url || undefined} alt={s.title} className="w-16 h-16 object-cover rounded-xl" />
                             ) : (
                               <div className="w-16 h-16 bg-pearl rounded-xl flex items-center justify-center">
                                 <ImageIcon size={24} className="text-graphite/20" />
@@ -624,14 +677,15 @@ export function AdminPanel() {
                                   <input 
                                     type="file"
                                     accept="image/*"
-                                    onChange={(e) => {
+                                    onChange={async (e) => {
                                       const file = e.target.files?.[0];
                                       if (file) {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => {
-                                          setEditingServiceData({...editingServiceData, image_url: reader.result as string});
-                                        };
-                                        reader.readAsDataURL(file);
+                                        try {
+                                          const url = await uploadFile(file);
+                                          setEditingServiceData({...editingServiceData, image_url: url});
+                                        } catch (err) {
+                                          alert("Upload failed");
+                                        }
                                       }
                                     }}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -719,7 +773,7 @@ export function AdminPanel() {
                               <Edit2 size={20} />
                             </button>
                             <button 
-                              onClick={() => deleteCase(c.id)}
+                              onClick={() => handleDeleteCase(c.id)}
                               className="p-2 text-graphite/40 hover:text-red-500 transition-colors"
                               title={t("admin.delete")}
                             >
@@ -1014,7 +1068,7 @@ export function AdminPanel() {
                   <div className="space-y-6">
                     {instagramPosts.map((post, i) => (
                       <div key={post.id} className="flex flex-col md:flex-row gap-6 items-start p-4 border border-graphite/10 rounded-2xl">
-                        <img src={post.image} alt="post" className="w-full md:w-32 h-32 object-cover rounded-xl" />
+                        <img src={post.image || undefined} alt="post" className="w-full md:w-32 h-32 object-cover rounded-xl" />
                         <div className="flex-1 space-y-4 w-full">
                           <div>
                             <label className="block text-xs font-medium text-graphite/60 mb-1">{t("admin.imageUrl", "Image URL")}</label>
@@ -1090,10 +1144,15 @@ export function AdminPanel() {
                       onClick={async () => {
                         setIsWaSaving(true);
                         setWaSaveSuccess(false);
-                        await updateWhatsapp(waNumberInput);
-                        setIsWaSaving(false);
-                        setWaSaveSuccess(true);
-                        setTimeout(() => setWaSaveSuccess(false), 3000);
+                        try {
+                          await updateWhatsapp(waNumberInput);
+                          setWaSaveSuccess(true);
+                          setTimeout(() => setWaSaveSuccess(false), 3000);
+                        } catch (e) {
+                          alert("Ошибка при сохранении / Error saving");
+                        } finally {
+                          setIsWaSaving(false);
+                        }
                       }}
                       disabled={isWaSaving}
                       className="bg-graphite text-white px-6 py-2.5 rounded-xl hover:bg-gold transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50"
@@ -1110,35 +1169,86 @@ export function AdminPanel() {
                   </h3>
                   <div className="max-w-md space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-graphite/60 mb-1">Desktop Video URL (MP4)</label>
-                      <input 
-                        type="text" 
-                        value={heroVideoInput}
-                        onChange={e => setHeroVideoInput(e.target.value)}
-                        placeholder="https://example.com/video-desktop.mp4"
-                        className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
-                      />
-                      <p className="text-xs text-graphite/50 mt-1">Direct link to an MP4 video file. Used as the main background on desktop.</p>
+                      <label className="block text-sm font-medium text-graphite/60 mb-1">Desktop Video (Upload or URL)</label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          value={heroVideoInput}
+                          onChange={e => setHeroVideoInput(e.target.value)}
+                          placeholder="https://example.com/video-desktop.mp4"
+                          className="flex-1 border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold text-sm"
+                        />
+                        <div className="relative">
+                          <input 
+                            type="file" 
+                            accept="video/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                try {
+                                  const url = await uploadFile(file);
+                                  setHeroVideoInput(url);
+                                } catch (err) {
+                                  alert("Upload failed");
+                                }
+                              }
+                            }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <button className="h-full px-4 rounded-xl bg-graphite text-white text-sm font-medium hover:bg-gold transition-colors">
+                            Upload
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-graphite/50 mt-1">Direct link or upload an MP4 video file. Used as the main background on desktop.</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-graphite/60 mb-1">Mobile Video URL (MP4)</label>
-                      <input 
-                        type="text" 
-                        value={heroVideoMobileInput}
-                        onChange={e => setHeroVideoMobileInput(e.target.value)}
-                        placeholder="https://example.com/video-mobile.mp4"
-                        className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
-                      />
-                      <p className="text-xs text-graphite/50 mt-1">Direct link to an MP4 video file. Used as the main background on mobile devices.</p>
+                      <label className="block text-sm font-medium text-graphite/60 mb-1">Mobile Video (Upload or URL)</label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          value={heroVideoMobileInput}
+                          onChange={e => setHeroVideoMobileInput(e.target.value)}
+                          placeholder="https://example.com/video-mobile.mp4"
+                          className="flex-1 border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold text-sm"
+                        />
+                        <div className="relative">
+                          <input 
+                            type="file" 
+                            accept="video/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                try {
+                                  const url = await uploadFile(file);
+                                  setHeroVideoMobileInput(url);
+                                } catch (err) {
+                                  alert("Upload failed");
+                                }
+                              }
+                            }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <button className="h-full px-4 rounded-xl bg-graphite text-white text-sm font-medium hover:bg-gold transition-colors">
+                            Upload
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-graphite/50 mt-1">Direct link or upload an MP4 video file. Used as the main background on mobile devices.</p>
                     </div>
                     <button 
                       onClick={async () => {
                         setIsHeroSaving(true);
                         setHeroSaveSuccess(false);
-                        await updateHeroVideoUrl(heroVideoInput, heroVideoMobileInput);
-                        setIsHeroSaving(false);
-                        setHeroSaveSuccess(true);
-                        setTimeout(() => setHeroSaveSuccess(false), 3000);
+                        try {
+                          await updateHeroVideoUrl(heroVideoInput, heroVideoMobileInput);
+                          setHeroSaveSuccess(true);
+                          setTimeout(() => setHeroSaveSuccess(false), 3000);
+                        } catch (e) {
+                          alert("Ошибка при сохранении / Error saving");
+                        } finally {
+                          setIsHeroSaving(false);
+                        }
                       }}
                       disabled={isHeroSaving}
                       className="bg-graphite text-white px-6 py-2.5 rounded-xl hover:bg-gold transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50"
@@ -1165,8 +1275,8 @@ export function AdminPanel() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {settings?.videos?.map(video => (
                       <div key={video.id} className={`border border-graphite/10 rounded-2xl p-4 flex flex-col gap-4 ${!video.isActive ? 'opacity-60' : ''}`}>
-                        <div className="aspect-video bg-black rounded-xl overflow-hidden relative">
-                          <video src={video.videoUrl} poster={video.posterUrl} className="w-full h-full object-cover" />
+                        <div className="aspect-[9/16] bg-black rounded-xl overflow-hidden relative max-w-xs mx-auto w-full">
+                          <video src={video.videoUrl || undefined} poster={video.posterUrl || undefined} className="w-full h-full object-cover" />
                         </div>
                         <div>
                           <h4 className="font-bold text-graphite truncate">{video.title || 'Untitled'}</h4>
@@ -1175,13 +1285,13 @@ export function AdminPanel() {
                         <div className="flex items-center justify-between mt-auto pt-4 border-t border-graphite/5">
                           <span className="text-xs text-graphite/50 font-medium tracking-widest uppercase">Order: {video.order}</span>
                           <div className="flex gap-2">
-                            <button onClick={() => updateVideo(video.id, { isActive: !video.isActive })} className="p-2 text-graphite/60 hover:text-gold bg-pearl rounded-lg">
+                            <button onClick={() => handleToggleVideoStatus(video)} className="p-2 text-graphite/60 hover:text-gold bg-pearl rounded-lg">
                               {video.isActive ? 'Hide' : 'Show'}
                             </button>
                             <button onClick={() => handleOpenVideoModal(video)} className="p-2 text-graphite/60 hover:text-gold bg-pearl rounded-lg">
                               <Edit2 size={16} />
                             </button>
-                            <button onClick={() => { if(window.confirm('Delete this video?')) deleteVideo(video.id); }} className="p-2 text-graphite/60 hover:text-red-500 bg-pearl rounded-lg">
+                            <button onClick={() => handleDeleteVideo(video.id)} className="p-2 text-graphite/60 hover:text-red-500 bg-pearl rounded-lg">
                               <Trash2 size={16} />
                             </button>
                           </div>
@@ -1205,17 +1315,21 @@ export function AdminPanel() {
                     {t("admin.specialists")}
                   </h1>
                   <button 
-                    onClick={() => {
+                    onClick={async () => {
                       const newId = 'spec_' + Date.now();
                       const newSpec = { id: newId, name: 'New Specialist', role: 'Role', exp: '0 Years', spec: 'Specialization', image: '' };
-                      ['hy', 'ru', 'en'].forEach(lang => {
-                        const l = lang as 'hy' | 'ru' | 'en';
-                        const items = [...(content[l]?.specialists?.items || [])];
-                        items.push(newSpec);
-                        updateContent(l, 'specialists', { items });
-                      });
-                      setEditingSpecialistId(newId);
-                      setEditingSpecialistData(newSpec);
+                      try {
+                        await Promise.all(['hy', 'ru', 'en'].map(lang => {
+                          const l = lang as 'hy' | 'ru' | 'en';
+                          const items = [...(content[l]?.specialists?.items || [])];
+                          items.push(newSpec);
+                          return updateContent(l, 'specialists', { items });
+                        }));
+                        setEditingSpecialistId(newId);
+                        setEditingSpecialistData(newSpec);
+                      } catch (error) {
+                        alert("Ошибка при добавлении / Error adding");
+                      }
                     }}
                     className="flex items-center gap-2 bg-graphite text-white px-5 py-2.5 rounded-full hover:bg-gold transition-colors text-sm font-medium"
                   >
@@ -1249,13 +1363,18 @@ export function AdminPanel() {
                               <Edit2 size={18} />
                             </button>
                             <button 
-                              onClick={() => {
-                                if (window.confirm("Delete this specialist?")) {
-                                  ['hy', 'ru', 'en'].forEach(lang => {
-                                    const l = lang as 'hy' | 'ru' | 'en';
-                                    const items = (content[l]?.specialists?.items || []).filter(item => item.id !== s.id);
-                                    updateContent(l, 'specialists', { items });
-                                  });
+                              onClick={async () => {
+                                if (window.confirm("Delete this specialist? / Удалить этого специалиста?")) {
+                                  try {
+                                    await Promise.all(['hy', 'ru', 'en'].map(lang => {
+                                      const l = lang as 'hy' | 'ru' | 'en';
+                                      const items = (content[l]?.specialists?.items || []).filter(item => item.id !== s.id);
+                                      return updateContent(l, 'specialists', { items });
+                                    }));
+                                    alert("Специалист удален! / Specialist deleted!");
+                                  } catch (error) {
+                                    alert("Ошибка при удалении / Error deleting");
+                                  }
                                 }
                               }}
                               className="p-3 text-graphite/40 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
@@ -1318,14 +1437,15 @@ export function AdminPanel() {
                                 <input 
                                   type="file"
                                   accept="image/*"
-                                  onChange={(e) => {
+                                  onChange={async (e) => {
                                     const file = e.target.files?.[0];
                                     if (file) {
-                                      const reader = new FileReader();
-                                      reader.onloadend = () => {
-                                        setEditingSpecialistData({...editingSpecialistData, image: reader.result as string});
-                                      };
-                                      reader.readAsDataURL(file);
+                                      try {
+                                        const url = await uploadFile(file);
+                                        setEditingSpecialistData({...editingSpecialistData, image: url});
+                                      } catch (err) {
+                                        alert("Upload failed");
+                                      }
                                     }
                                   }}
                                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -1345,21 +1465,26 @@ export function AdminPanel() {
                               Cancel
                             </button>
                             <button 
-                              onClick={() => {
-                                ['hy', 'ru', 'en'].forEach(lang => {
-                                  const l = lang as 'hy' | 'ru' | 'en';
-                                  const items = [...(content[l]?.specialists?.items || [])];
-                                  const index = items.findIndex(item => item.id === s.id);
-                                  if (index !== -1) {
-                                    if (l === 'hy') {
-                                      items[index] = { ...items[index], ...editingSpecialistData };
-                                    } else {
-                                      items[index] = { ...items[index], image: editingSpecialistData.image };
+                              onClick={async () => {
+                                try {
+                                  await Promise.all(['hy', 'ru', 'en'].map(lang => {
+                                    const l = lang as 'hy' | 'ru' | 'en';
+                                    const items = [...(content[l]?.specialists?.items || [])];
+                                    const index = items.findIndex(item => item.id === s.id);
+                                    if (index !== -1) {
+                                      if (l === 'hy') {
+                                        items[index] = { ...items[index], ...editingSpecialistData };
+                                      } else {
+                                        items[index] = { ...items[index], image: editingSpecialistData.image };
+                                      }
+                                      return updateContent(l, 'specialists', { items });
                                     }
-                                    updateContent(l, 'specialists', { items });
-                                  }
-                                });
-                                setEditingSpecialistId(null);
+                                  }));
+                                  setEditingSpecialistId(null);
+                                  alert("Специалист успешно сохранен! / Specialist saved successfully!");
+                                } catch (error) {
+                                  alert("Ошибка при сохранении / Error saving specialist");
+                                }
                               }}
                               className="px-4 py-2 rounded-xl text-sm font-medium bg-gold text-white hover:bg-gold/90 transition-colors"
                             >
@@ -1453,23 +1578,53 @@ export function AdminPanel() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-graphite/60 mb-1">{t("admin.imageBefore")}</label>
-                  <input 
-                    type="text"
-                    value={formData.beforeLabel || ""}
-                    onChange={(e) => setFormData({...formData, beforeLabel: e.target.value})}
-                    className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
-                    placeholder="Before"
-                  />
+                  <div className="relative h-12">
+                    <input 
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try {
+                            const url = await uploadFile(file);
+                            setFormData({...formData, beforeImage: url});
+                          } catch (err) {
+                            alert("Upload failed");
+                          }
+                        }
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-between border border-graphite/10 rounded-xl px-4 py-3 bg-white text-sm text-graphite/60 overflow-hidden">
+                      <span className="truncate">{formData.beforeImage ? 'Image uploaded' : 'Upload Before Image'}</span>
+                      <ImageIcon size={16} />
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-graphite/60 mb-1">{t("admin.imageAfter")}</label>
-                  <input 
-                    type="text"
-                    value={formData.afterLabel || ""}
-                    onChange={(e) => setFormData({...formData, afterLabel: e.target.value})}
-                    className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
-                    placeholder="After"
-                  />
+                  <div className="relative h-12">
+                    <input 
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try {
+                            const url = await uploadFile(file);
+                            setFormData({...formData, afterImage: url});
+                          } catch (err) {
+                            alert("Upload failed");
+                          }
+                        }
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-between border border-graphite/10 rounded-xl px-4 py-3 bg-white text-sm text-graphite/60 overflow-hidden">
+                      <span className="truncate">{formData.afterImage ? 'Image uploaded' : 'Upload After Image'}</span>
+                      <ImageIcon size={16} />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1525,14 +1680,37 @@ export function AdminPanel() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-graphite/60 mb-1">Video URL (mp4, webm)</label>
-                <input 
-                  type="text"
-                  value={videoFormData.videoUrl}
-                  onChange={(e) => setVideoFormData({...videoFormData, videoUrl: e.target.value})}
-                  className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
-                  placeholder="https://example.com/video.mp4"
-                />
+                <label className="block text-sm font-medium text-graphite/60 mb-1">Video (Upload or URL)</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text"
+                    value={videoFormData.videoUrl}
+                    onChange={(e) => setVideoFormData({...videoFormData, videoUrl: e.target.value})}
+                    className="flex-1 border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
+                    placeholder="https://example.com/video.mp4"
+                  />
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept="video/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try {
+                            const url = await uploadFile(file);
+                            setVideoFormData({...videoFormData, videoUrl: url});
+                          } catch (err) {
+                            alert("Upload failed");
+                          }
+                        }
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <button className="h-full px-6 rounded-xl bg-graphite text-white text-sm font-medium hover:bg-gold transition-colors">
+                      Upload
+                    </button>
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-graphite/60 mb-1">Poster Image URL (Optional)</label>

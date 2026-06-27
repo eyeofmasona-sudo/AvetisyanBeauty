@@ -2,6 +2,21 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
+import multer from "multer";
+import { initializeApp, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
+
+// Initialize Firebase Admin
+let firebaseAdminApp;
+if (!getApps().length) {
+  firebaseAdminApp = initializeApp({
+    projectId: process.env.FIREBASE_PROJECT_ID || 'gen-lang-client-0533202242'
+  });
+} else {
+  firebaseAdminApp = getApps()[0];
+}
+const db = getFirestore(firebaseAdminApp, "ai-studio-goldensunaesthet-06980057-72a8-4947-ad91-dd805dfcbaa5");
 
 function encodeWAV(pcmBuffer: Buffer, sampleRate: number, numChannels: number, bitsPerSample: number): Buffer {
   const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
@@ -26,7 +41,7 @@ function encodeWAV(pcmBuffer: Buffer, sampleRate: number, numChannels: number, b
   return buffer;
 }
 
-import { createServer as createViteServer } from "vite";
+
 import { GoogleGenAI, Modality, GenerateVideosOperation } from "@google/genai";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
@@ -164,6 +179,24 @@ async function startServer() {
   };
 
   // --- Admin Auth Endpoints ---
+  app.post("/api/auth/login-firebase", async (req, res) => {
+    try {
+      const { idToken } = req.body;
+      const decodedToken = await getAuth(firebaseAdminApp).verifyIdToken(idToken);
+      if (decodedToken.email === 'eyeofmasona@gmail.com' && decodedToken.email_verified) {
+        const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_only_for_dev';
+        const token = jwt.sign({ username: decodedToken.email }, jwtSecret, { expiresIn: '12h' });
+        res.cookie('admin_token', token, { httpOnly: true, secure: true, sameSite: 'none', maxAge: 12 * 60 * 60 * 1000 });
+        res.json({ success: true });
+      } else {
+        res.status(401).json({ error: "Unauthorized email" });
+      }
+    } catch (error) {
+      console.error("Firebase auth error:", error);
+      res.status(401).json({ error: "Invalid token" });
+    }
+  });
+
   app.post("/api/auth/login", (req, res) => {
     const { username, password } = req.body;
     const adminUser = process.env.ADMIN_USERNAME;
@@ -177,7 +210,7 @@ async function startServer() {
 
     if (username === adminUser && password === adminPass) {
       const token = jwt.sign({ username }, jwtSecret, { expiresIn: '12h' });
-      res.cookie('admin_token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 12 * 60 * 60 * 1000 });
+      res.cookie('admin_token', token, { httpOnly: true, secure: true, sameSite: 'none', maxAge: 12 * 60 * 60 * 1000 });
       res.json({ success: true });
     } else {
       res.status(401).json({ error: "Invalid credentials" });
@@ -185,7 +218,7 @@ async function startServer() {
   });
 
   app.post("/api/auth/logout", (req, res) => {
-    res.clearCookie('admin_token');
+    res.clearCookie('admin_token', { httpOnly: true, secure: true, sameSite: 'none' });
     res.json({ success: true });
   });
 
@@ -600,8 +633,102 @@ async function startServer() {
     }
   });
 
+  // Setup File Uploads with Multer
+  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  app.post("/api/db/site/:docId", async (req, res) => {
+    try {
+      const token = req.cookies?.admin_token;
+      console.log("DB update request received. Token exists:", !!token);
+      if (!token) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_only_for_dev';
+      jwt.verify(token, jwtSecret);
+
+      const { docId } = req.params;
+      const data = req.body;
+      await db.collection('site').doc(docId).set(data, { merge: true });
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error("DB update error", e);
+      res.status(500).json({ error: "Failed to update DB", details: e.message });
+    }
+  });
+
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+    }
+  });
+
+  const upload = multer({ 
+    storage,
+    limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit for videos
+  });
+
+  // Expose public folder statically (for uploads)
+  app.use('/uploads', express.static(uploadsDir));
+
+  app.post("/api/upload", upload.single('file'), (req, res) => {
+    try {
+      const token = req.cookies?.admin_token;
+      if (!token) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_only_for_dev';
+      jwt.verify(token, jwtSecret);
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      // Return the public URL for the uploaded file
+      res.json({ url: `/uploads/${req.file.filename}` });
+    } catch (e) {
+      console.error("Upload error", e);
+      res.status(500).json({ error: "Upload failed" });
+    }
+  });
+
+  app.delete("/api/upload", (req, res) => {
+    try {
+      const token = req.cookies?.admin_token;
+      if (!token) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_only_for_dev';
+      jwt.verify(token, jwtSecret);
+
+      const { url } = req.body;
+      if (!url) return res.status(400).json({ error: "No URL provided" });
+
+      const fileName = url.split('/').pop();
+      if (fileName) {
+        const filePath = path.join(uploadsDir, fileName);
+        if (fs.existsSync(filePath)) {
+           fs.unlinkSync(filePath);
+        }
+      }
+      res.json({ success: true });
+    } catch (e) {
+      console.error("Delete file error", e);
+      res.status(500).json({ error: "Failed to delete file" });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

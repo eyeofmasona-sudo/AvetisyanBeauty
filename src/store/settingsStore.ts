@@ -29,12 +29,12 @@ const defaultSettings: SiteSettings = {
 
 interface SettingsState {
   settings: SiteSettings;
-  updateWhatsapp: (number: string) => void;
-  updateHeroVideoUrl: (url: string, mobileUrl?: string) => void;
-  addVideo: (video: SiteVideo) => void;
-  updateVideo: (id: string, video: Partial<SiteVideo>) => void;
-  deleteVideo: (id: string) => void;
-  setVideos: (videos: SiteVideo[]) => void;
+  updateWhatsapp: (number: string) => Promise<void>;
+  updateHeroVideoUrl: (url: string, mobileUrl?: string) => Promise<void>;
+  addVideo: (video: SiteVideo) => Promise<void>;
+  updateVideo: (id: string, video: Partial<SiteVideo>) => Promise<void>;
+  deleteVideo: (id: string) => Promise<void>;
+  setVideos: (videos: SiteVideo[]) => Promise<void>;
   loadFromDB: () => Promise<void>;
   saveToDB: (settings: SiteSettings) => Promise<void>;
 }
@@ -108,9 +108,10 @@ export const useSettingsStore = create<SettingsState>()(
       
       saveToDB: async (settings) => {
         try {
-          await setDoc(doc(db, 'site', 'settings'), settings);
+          await setDoc(doc(db, 'site', 'settings'), settings, { merge: true });
         } catch (e) {
           console.error("Failed to save settings to DB", e);
+          throw e;
         }
       }
     }),

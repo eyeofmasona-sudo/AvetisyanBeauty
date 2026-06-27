@@ -491,7 +491,7 @@ export function AIPanel() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {result.map((img: string, idx: number) => (
                     <div key={idx} className="relative group">
-                      <img src={img} alt={`Generated ${idx}`} className="w-full rounded-xl shadow-sm object-contain" />
+                      <img src={img || undefined} alt={`Generated ${idx}`} className="w-full rounded-xl shadow-sm object-contain" />
                       <a href={img} download={`image-${idx}.jpg`} className="absolute bottom-4 right-4 p-2 bg-white/90 backdrop-blur rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity text-graphite hover:text-gold"><Download size={16} /></a>
                     </div>
                   ))}
@@ -500,14 +500,14 @@ export function AIPanel() {
               
               {activeTool === 'video' && (
                 <div className="relative">
-                  <video src={result} controls autoPlay loop className="w-full rounded-xl bg-black max-h-[500px]"></video>
+                  <video src={result || undefined} controls autoPlay loop className="w-full rounded-xl bg-black max-h-[500px]"></video>
                   <a href={result} download="video.mp4" className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur rounded-full shadow text-graphite hover:text-gold"><Download size={16} /></a>
                 </div>
               )}
               
               {(activeTool === 'tts' || activeTool === 'podcast') && (
                 <div className="bg-pearl p-6 rounded-xl">
-                  <audio src={result} controls className="w-full outline-none"></audio>
+                  <audio src={result || undefined} controls className="w-full outline-none"></audio>
                   <div className="mt-4 flex justify-end">
                     <a href={result} download={`${activeTool}.wav`} className="flex items-center gap-2 text-sm text-graphite hover:text-gold font-medium"><Download size={16} /> Download Audio</a>
                   </div>
@@ -524,20 +524,20 @@ export function AIPanel() {
                     <div>
                       <h4 className="font-bold mb-2 text-gold">Key Visual</h4>
                       <div className="relative group">
-                        <img src={result.image} alt="Generated Campaign" className="w-full rounded-xl object-cover shadow-sm" />
+                        <img src={result.image || undefined} alt="Generated Campaign" className="w-full rounded-xl object-cover shadow-sm" />
                         <a href={result.image} download="magic-visual.jpg" className="absolute bottom-4 right-4 p-2 bg-white/90 backdrop-blur rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity text-graphite hover:text-gold"><Download size={16} /></a>
                       </div>
                     </div>
                     <div className="flex flex-col gap-6">
                       <div>
                         <h4 className="font-bold mb-2 text-gold">Audio Spot</h4>
-                        <audio src={result.audio} controls className="w-full"></audio>
+                        <audio src={result.audio || undefined} controls className="w-full"></audio>
                       </div>
                       <div>
                         <h4 className="font-bold mb-2 text-gold">Video Ad</h4>
                         {result.videoReady ? (
                           <div className="relative">
-                            <video src={result.video} controls autoPlay loop className="w-full rounded-xl bg-black shadow-sm"></video>
+                            <video src={result.video || undefined} controls autoPlay loop className="w-full rounded-xl bg-black shadow-sm"></video>
                             <a href={result.video} download="magic-video.mp4" className="absolute top-2 right-2 p-2 bg-white/90 backdrop-blur rounded-full shadow text-graphite hover:text-gold"><Download size={16} /></a>
                           </div>
                         ) : (
@@ -575,10 +575,10 @@ export function AIPanel() {
                     </div>
                     <p className="text-graphite/80 line-clamp-2 mb-2 text-xs">{item.prompt}</p>
                     
-                    {item.type === 'image' && <div className="flex gap-1 overflow-hidden">{item.result.map((img:string, i:number) => <img key={i} src={img} className="h-10 w-10 object-cover rounded" />)}</div>}
+                    {item.type === 'image' && <div className="flex gap-1 overflow-hidden">{item.result.map((img:string, i:number) => <img key={i} src={img || undefined} className="h-10 w-10 object-cover rounded" />)}</div>}
                     {item.type === 'text' && <p className="text-xs text-graphite/60 line-clamp-1 italic">{item.result}</p>}
                     {(item.type === 'video' || item.type === 'magic') && <div className="text-xs text-graphite/60">Video ready</div>}
-                    {(item.type === 'tts' || item.type === 'podcast') && <audio src={item.result} controls className="w-full h-6"></audio>}
+                    {(item.type === 'tts' || item.type === 'podcast') && <audio src={item.result || undefined} controls className="w-full h-6"></audio>}
                   </div>
                 ))}
               </div>
