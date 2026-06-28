@@ -4,7 +4,9 @@ import { defaultGalleryVideos, useSettingsStore } from '../store/settingsStore';
 export function VideoCarousel() {
   const { settings } = useSettingsStore();
   const activeVideos = settings?.videos?.filter(v => v.isActive).sort((a, b) => a.order - b.order) || [];
-  const videos = activeVideos.length > 0 ? activeVideos : defaultGalleryVideos;
+  const activeVideoIds = new Set(activeVideos.map(video => video.id));
+  const fallbackVideos = defaultGalleryVideos.filter(video => !activeVideoIds.has(video.id));
+  const videos = [...activeVideos, ...fallbackVideos].sort((a, b) => a.order - b.order);
 
   if (!videos || videos.length === 0) return null;
 
