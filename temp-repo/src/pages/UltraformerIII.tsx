@@ -1,33 +1,36 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2 } from "lucide-react";
+import { Canvas } from "@react-three/fiber";
+import { Environment, Lightformer } from "@react-three/drei";
+import { SkinLayers3DInteractive } from "../components/3d/SkinLayers3D";
+import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
 import { BookingModal } from "../components/BookingModal";
 import { SEO } from "../components/SEO";
 
-export function GoldenSun() {
+export function UltraformerIII() {
   const { t } = useTranslation();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
-  const serviceVisual = "/images/services/golden-sun-service.png";
+  const serviceVisual = "/images/services/ultraformer-hero.png";
 
-  // Custom Schema for Golden Sun Service
+  // Custom Schema for Ultraformer Service
   const serviceSchema = {
     "@context": "https://schema.org",
     "@type": "Service",
-    "name": "Golden Sun",
+    "name": "Ultraformer III Non-Surgical SMAS Lifting",
     "provider": {
       "@type": "MedicalBusiness",
       "name": "Avetisyan Beauty Clinic"
     },
-    "description": "Exclusive Golden Sun aesthetic treatment at Avetisyan Beauty Clinic.",
+    "description": "Experience the next generation of non-surgical skin tightening and lifting with Ultraformer III.",
     "category": "Aesthetic Procedure"
   };
 
   return (
     <div className="bg-pearl min-h-screen text-graphite selection:bg-gold/30 selection:text-graphite">
-      <SEO titleKey="seo.goldensun.title" descriptionKey="seo.goldensun.description" schema={serviceSchema} />
+      <SEO titleKey="seo.ultraformer.title" descriptionKey="seo.ultraformer.description" schema={serviceSchema} />
       <Navbar onBookClick={() => setIsBookingOpen(true)} />
 
       <main>
@@ -47,7 +50,7 @@ export function GoldenSun() {
                   transition={{ duration: 0.8 }}
                 >
                   <span className="py-1.5 px-4 rounded-full border border-graphite/10 text-xs tracking-widest text-gold uppercase bg-pearl">
-                    {t("goldensun.badge", "Featured")}
+                    {t("ultraformer.badge")}
                   </span>
                 </motion.div>
                 
@@ -57,7 +60,7 @@ export function GoldenSun() {
                   transition={{ duration: 0.8, delay: 0.1 }}
                   className="mt-8 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display text-graphite"
                 >
-                  {t("goldensun.title", "Golden Sun")}
+                  {t("ultraformer.title")}
                 </motion.h1>
 
                 <motion.p
@@ -66,7 +69,7 @@ export function GoldenSun() {
                   transition={{ duration: 0.8, delay: 0.2 }}
                   className="mt-8 text-lg font-light text-graphite/70 leading-relaxed max-w-xl"
                 >
-                  {t("goldensun.desc", "Discover the radiant benefits of Golden Sun.")}
+                  {t("ultraformer.desc")}
                 </motion.p>
 
                 <motion.div
@@ -79,20 +82,24 @@ export function GoldenSun() {
                     onClick={() => setIsBookingOpen(true)}
                     className="px-8 py-4 bg-graphite text-white rounded-full font-medium hover:bg-gold transition-colors duration-300 shadow-xl shadow-graphite/10"
                   >
-                    {t("goldensun.bookBtn", "Book Golden Sun")}
+                    {t("ultraformer.bookBtn")}
                   </button>
                 </motion.div>
               </div>
 
-              {/* Visualization */}
+              {/* 3D Visualization */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 1, delay: 0.2 }}
-                className="relative h-[400px] lg:h-[600px] w-full bg-pearl/30 rounded-3xl border border-graphite/5 overflow-hidden flex items-center justify-center bg-gradient-to-br from-gold/10 to-champagne-gold/5"
+                className="relative h-[400px] lg:h-[600px] w-full bg-pearl/30 rounded-3xl border border-graphite/5 overflow-hidden"
               >
-                 <div className="absolute inset-0 bg-cover bg-center opacity-60 mix-blend-overlay" style={{ backgroundImage: `url('${serviceVisual}')` }}></div>
-                 <div className="w-48 h-48 rounded-full bg-gold/20 blur-3xl absolute animate-pulse"></div>
+                <SkinLayers3DInteractive />
+                <div className="absolute bottom-6 left-6 right-6 p-4 bg-white/80 backdrop-blur-md border border-white rounded-2xl z-10 pointer-events-none">
+                  <p className="text-xs font-medium tracking-widest uppercase text-graphite/60 text-center">
+                    {t("ultraformer.3d.viz", "Micro & Macro Focused Ultrasound Visualization")}
+                  </p>
+                </div>
               </motion.div>
             </div>
           </div>
@@ -110,10 +117,10 @@ export function GoldenSun() {
                 className="bg-white p-12 rounded-[2.5rem] border border-graphite/5 shadow-sm"
               >
                 <h3 className="font-display text-3xl text-graphite mb-6">
-                  {t("goldensun.howItWorks", "About the Treatment")}
+                  {t("ultraformer.howItWorks")}
                 </h3>
                 <p className="text-graphite/70 font-light leading-relaxed mb-8">
-                  {t("goldensun.howDesc", "The exclusive Golden Sun treatment provides a luxurious and radiant finish...")}
+                  {t("ultraformer.howDesc")}
                 </p>
                 <div className="aspect-video bg-graphite/5 rounded-2xl border border-graphite/5 overflow-hidden flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: `url('${serviceVisual}')` }}>
                   <div className="w-16 h-16 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center border border-white/20 text-gold shadow-xl cursor-pointer hover:scale-110 transition-transform">
@@ -121,6 +128,10 @@ export function GoldenSun() {
                       <path d="M8 5V19L19 12L8 5Z" fill="currentColor"/>
                     </svg>
                   </div>
+                <div className="aspect-video bg-graphite/5 rounded-2xl border border-graphite/5 overflow-hidden flex items-center justify-center">
+                  <p className="text-graphite/40 tracking-widest uppercase text-sm">
+                    {t("ultraformer.videoPlaceholder")}
+                  </p>
                 </div>
               </motion.div>
 
@@ -132,10 +143,10 @@ export function GoldenSun() {
                 className="bg-ivory p-12 rounded-[2.5rem] border border-graphite/5 shadow-sm"
               >
                 <h3 className="font-display text-3xl text-graphite mb-8">
-                  {t("goldensun.benefits", "Benefits")}
+                  {t("ultraformer.benefits")}
                 </h3>
                 <ul className="space-y-6">
-                  {((t("goldensun.benefitsList", { returnObjects: true })) as string[]).map((benefit, i) => (
+                  {((t("ultraformer.benefitsList", { returnObjects: true })) as string[]).map((benefit, i) => (
                     <li key={i} className="flex items-start gap-4">
                       <div className="mt-1 w-6 h-6 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
                         <CheckCircle2 size={14} className="text-gold" />

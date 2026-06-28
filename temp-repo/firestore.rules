@@ -1,6 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Default deny for any collection not explicitly handled below.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
     function isSignedIn() {
       return request.auth != null;
     }
@@ -39,8 +44,8 @@ service cloud.firestore {
 
     match /ai_knowledge/{itemId} {
       allow read: if true;
-      allow create: if isAdmin() && isValidId(itemId) && isValidAIKnowledgeItem(incoming()) && incoming().created_at == request.time.toMillis() && incoming().updated_at == request.time.toMillis();
-      allow update: if isAdmin() && isValidId(itemId) && isValidAIKnowledgeItem(incoming()) && incoming().updated_at == request.time.toMillis() && incoming().created_at == existing().created_at;
+      allow create: if isAdmin() && isValidId(itemId) && isValidAIKnowledgeItem(incoming());
+      allow update: if isAdmin() && isValidId(itemId) && isValidAIKnowledgeItem(incoming()) && incoming().created_at == existing().created_at;
       allow delete: if isAdmin() && isValidId(itemId);
     }
 
@@ -59,8 +64,8 @@ service cloud.firestore {
 
     match /ai_threads/{threadId} {
       allow read: if isAdmin();
-      allow create: if isAdmin() && isValidId(threadId) && isValidAIThread(incoming()) && incoming().created_at == request.time.toMillis() && incoming().updated_at == request.time.toMillis();
-      allow update: if isAdmin() && isValidId(threadId) && isValidAIThread(incoming()) && incoming().updated_at == request.time.toMillis() && incoming().created_at == existing().created_at;
+      allow create: if isAdmin() && isValidId(threadId) && isValidAIThread(incoming());
+      allow update: if isAdmin() && isValidId(threadId) && isValidAIThread(incoming()) && incoming().created_at == existing().created_at;
       allow delete: if isAdmin() && isValidId(threadId);
 
       // AI Messages (Subcollection)
@@ -76,7 +81,7 @@ service cloud.firestore {
 
       match /messages/{messageId} {
         allow read: if isAdmin();
-        allow create: if isAdmin() && isValidId(threadId) && isValidId(messageId) && isValidAIMessage(incoming()) && incoming().created_at == request.time.toMillis();
+        allow create: if isAdmin() && isValidId(threadId) && isValidId(messageId) && isValidAIMessage(incoming());
         allow update: if isAdmin() && isValidId(threadId) && isValidId(messageId) && isValidAIMessage(incoming()) && incoming().created_at == existing().created_at;
         allow delete: if isAdmin() && isValidId(threadId) && isValidId(messageId);
       }
@@ -104,6 +109,9 @@ service cloud.firestore {
     }
 
     // Instagram Accounts (encrypted tokens)
+    // Not used by the current server (tokens are stored server-side in
+    // instagram_accounts.json), so this collection is admin-only and
+    // otherwise denied by the default-deny rule above.
     match /instagram_accounts/{docId} {
       allow read, write: if isAdmin();
     }
@@ -117,7 +125,7 @@ service cloud.firestore {
     
     match /admins/{adminId} {
       allow read: if isAdmin();
-      allow create: if isAdmin() && isValidId(adminId) && isValidAdmin(incoming()) && incoming().createdAt == request.time.toMillis();
+      allow create: if isAdmin() && isValidId(adminId) && isValidAdmin(incoming());
       allow update: if false; // Immutable
       allow delete: if isAdmin() && isValidId(adminId);
     }

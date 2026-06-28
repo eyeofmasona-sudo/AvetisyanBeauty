@@ -1,6 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
     function isSignedIn() {
       return request.auth != null;
     }
@@ -97,17 +101,6 @@ service cloud.firestore {
       allow delete: if isAdmin() && isValidId(caseId);
     }
     
-    // Site data (content, gallery)
-    match /site/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // Instagram Accounts (encrypted tokens)
-    match /instagram_accounts/{docId} {
-      allow read, write: if isAdmin();
-    }
-
     // Admins
     function isValidAdmin(data) {
       return data.keys().hasAll(['email', 'createdAt']) && data.keys().size() == 2 &&

@@ -80,12 +80,14 @@ async function startServer() {
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:", "blob:", "https:"],
         mediaSrc: ["'self'", "data:", "blob:", "https:"],
-        connectSrc: ["'self'", "https:"],
+        connectSrc: ["'self'", "https:", "wss:", "ws:"],
         frameSrc: ["'self'", "https:"],
         objectSrc: ["'none'"],
+        frameAncestors: ["*"],
       },
     },
     crossOriginEmbedderPolicy: false,
+    frameguard: false,
   }));
 
   const authRateLimit = rateLimit({

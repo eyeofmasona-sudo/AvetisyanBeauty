@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clapperboard, ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react';
-import { useSettingsStore, defaultGalleryVideos } from '../store/settingsStore';
+import { useSettingsStore } from '../store/settingsStore';
 
 export function VideoCarousel() {
   const { t } = useTranslation();
@@ -15,6 +15,8 @@ export function VideoCarousel() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Record<number, HTMLVideoElement | null>>({});
   const [mutedIdx, setMutedIdx] = useState<Record<number, boolean>>({});
+
+  const videos = settings?.videos?.filter(v => v.isActive).sort((a, b) => a.order - b.order) || [];
 
   // Autoplay (muted, like Instagram Reels) only the card that's mostly in view.
   useEffect(() => {

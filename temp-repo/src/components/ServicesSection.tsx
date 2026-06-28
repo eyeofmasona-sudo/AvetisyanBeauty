@@ -66,6 +66,13 @@ export function ServicesSection() {
               className={`group relative flex flex-col overflow-hidden rounded-[1.25rem] bg-graphite shadow-sm ring-1 ring-graphite/10 transition-all duration-500 md:min-h-[460px] md:rounded-[1.5rem] md:hover:-translate-y-1 md:hover:shadow-2xl md:hover:shadow-graphite/15 ${
                 index < 2 ? "md:col-span-3" : "md:col-span-2"
               } ${service.href ? "cursor-pointer" : ""}`}
+              onKeyDown={(e) => {
+                if (service.href && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  navigate(service.href);
+                }
+              }}
+              className={`group relative bg-white border border-graphite/5 rounded-3xl overflow-hidden shadow-sm hover:scale-[1.02] hover:-translate-y-1 hover:shadow-2xl hover:shadow-graphite/10 transition-all duration-500 flex flex-col h-full ${service.href ? "cursor-pointer" : ""}`}
             >
               {service.image_url ? (
                 <div className="relative aspect-[4/3] w-full overflow-hidden md:absolute md:inset-0 md:aspect-auto">
