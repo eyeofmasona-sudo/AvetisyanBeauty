@@ -194,23 +194,23 @@ const resources = {
         "diplomas": "Դիպլոմներ",
         "certificates": "Վկայականներ",
         "items": {
-          "elena": {
-            "name": "Բժ. Ելենա Ռոստովա",
-            "role": "Գլխավոր բժշկական տնօրեն",
-            "exp": "15+ Տարի",
-            "spec": "Հակատարիքային և SMAS Արձանագրություններ"
+          "lika": {
+            "name": "Լիկա Պետրոսյան",
+            "role": "",
+            "exp": "",
+            "spec": ""
           },
-          "marcus": {
-            "name": "Բժ. Մարկուս Չեն",
-            "role": "Առաջատար էսթետիկ վիրաբույժ",
-            "exp": "12+ Տարի",
-            "spec": "Մարմնի կոնտուրավորման փորձագետ"
+          "maria": {
+            "name": "Մարիա Ավետիսյան",
+            "role": "",
+            "exp": "",
+            "spec": ""
           },
-          "sarah": {
-            "name": "Բժ. Սառա Ալ-Ֆայեդ",
-            "role": "Ավագ մաշկաբան",
-            "exp": "10+ Տարի",
-            "spec": "Մաշկի առաջադեմ երիտասարդացում"
+          "lilit": {
+            "name": "Լիլիթ Հովհանիսյան",
+            "role": "",
+            "exp": "",
+            "spec": ""
           }
         }
       },
@@ -492,23 +492,23 @@ const resources = {
         "diplomas": "Дипломы",
         "certificates": "Сертификаты",
         "items": {
-          "elena": {
-            "name": "Д-р Елена Ростова",
-            "role": "Главный медицинский директор",
-            "exp": "15+ Лет",
-            "spec": "Протоколы Anti-Aging и SMAS"
+          "lika": {
+            "name": "Լիկա Պետրոսյան",
+            "role": "",
+            "exp": "",
+            "spec": ""
           },
-          "marcus": {
-            "name": "Д-р Маркус Чен",
-            "role": "Ведущий эстетический хирург",
-            "exp": "12+ Лет",
-            "spec": "Эксперт по контурированию тела"
+          "maria": {
+            "name": "Մարիա Ավետիսյան",
+            "role": "",
+            "exp": "",
+            "spec": ""
           },
-          "sarah": {
-            "name": "Д-р Сара Аль-Файед",
-            "role": "Старший дерматолог",
-            "exp": "10+ Лет",
-            "spec": "Передовое омоложение кожи"
+          "lilit": {
+            "name": "Լիլիթ Հովհանիսյան",
+            "role": "",
+            "exp": "",
+            "spec": ""
           }
         }
       },
@@ -790,23 +790,23 @@ const resources = {
         "diplomas": "Diplomas",
         "certificates": "Certificates",
         "items": {
-          "elena": {
-            "name": "Dr. Elena Rostova",
-            "role": "Chief Medical Director",
-            "exp": "15+ Years",
-            "spec": "Anti-Aging & SMAS Protocols"
+          "lika": {
+            "name": "Լիկա Պետրոսյան",
+            "role": "",
+            "exp": "",
+            "spec": ""
           },
-          "marcus": {
-            "name": "Dr. Marcus Chen",
-            "role": "Lead Aesthetic Surgeon",
-            "exp": "12+ Years",
-            "spec": "Body Contouring Expert"
+          "maria": {
+            "name": "Մարիա Ավետիսյան",
+            "role": "",
+            "exp": "",
+            "spec": ""
           },
-          "sarah": {
-            "name": "Dr. Sarah Al-Fayed",
-            "role": "Senior Dermatologist",
-            "exp": "10+ Years",
-            "spec": "Advanced Skin Rejuvenation"
+          "lilit": {
+            "name": "Լիլիթ Հովհանիսյան",
+            "role": "",
+            "exp": "",
+            "spec": ""
           }
         }
       },

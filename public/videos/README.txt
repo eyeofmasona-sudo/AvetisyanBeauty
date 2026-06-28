@@ -1,1 +1,2 @@
-Upload your hero video here named hero-background.mp4
+Desktop hero video: `hero-background.mp4`
+Mobile hero video: `hero-background-mobile.mp4`

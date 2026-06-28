@@ -41,7 +41,7 @@ export function AdminPanel() {
   const [waSaveSuccess, setWaSaveSuccess] = useState(false);
   
   const [heroVideoInput, setHeroVideoInput] = useState(settings?.heroVideoUrl || "/videos/hero-background.mp4");
-  const [heroVideoMobileInput, setHeroVideoMobileInput] = useState(settings?.heroVideoMobileUrl || "/videos/hero-background.mp4");
+  const [heroVideoMobileInput, setHeroVideoMobileInput] = useState(settings?.heroVideoMobileUrl || "/videos/hero-background-mobile.mp4");
   const [isHeroSaving, setIsHeroSaving] = useState(false);
   const [heroSaveSuccess, setHeroSaveSuccess] = useState(false);
 

@@ -1,9 +1,10 @@
 import React from 'react';
-import { useSettingsStore } from '../store/settingsStore';
+import { defaultGalleryVideos, useSettingsStore } from '../store/settingsStore';
 
 export function VideoCarousel() {
   const { settings } = useSettingsStore();
-  const videos = settings?.videos?.filter(v => v.isActive).sort((a, b) => a.order - b.order) || [];
+  const activeVideos = settings?.videos?.filter(v => v.isActive).sort((a, b) => a.order - b.order) || [];
+  const videos = activeVideos.length > 0 ? activeVideos : defaultGalleryVideos;
 
   if (!videos || videos.length === 0) return null;
 

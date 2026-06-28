@@ -49,6 +49,95 @@ export type LocalizedContent = {
   [key in 'hy' | 'ru' | 'en']: SiteContent;
 };
 
+const realSpecialists: SpecialistItem[] = [
+  {
+    id: "lika-petrosyan",
+    name: "Լիկա Պետրոսյան",
+    role: "",
+    exp: "",
+    spec: "",
+    image: "/images/specialists/lilit-hovhannisyan.png",
+  },
+  {
+    id: "maria-avetisyan",
+    name: "Մարիա Ավետիսյան",
+    role: "",
+    exp: "",
+    spec: "",
+    image: "/images/specialists/maria-avetisyan.jpg",
+  },
+  {
+    id: "lilit-hovhannisyan",
+    name: "Լիլիթ Հովհանիսյան",
+    role: "",
+    exp: "",
+    spec: "",
+    image: "/images/specialists/lika-petrosyan.jpg",
+  },
+];
+
+const serviceImageById: Record<string, string> = {
+  ultraformer: "/images/services/ultraformer-hero.png",
+  smas: "/images/services/smas-lifting-card.png",
+  goldensun: "/images/services/golden-sun-service.png",
+  "body-contouring": "/images/services/body-contouring-card.png",
+  "skin-rejuvenation": "/images/services/skin-rejuvenation-card.png",
+};
+
+const normalizeServiceItems = (items: ServiceItem[]) =>
+  items.map((item) => {
+    const fallbackImage = serviceImageById[item.id];
+
+    if (!fallbackImage) {
+      return item;
+    }
+
+    return {
+      ...item,
+      image_url: fallbackImage,
+    };
+  });
+
+const normalizeSpecialists = (content: LocalizedContent): LocalizedContent => {
+  const demoIds = new Set(["elena", "marcus", "sarah"]);
+  const specialistIds = new Set(realSpecialists.map(item => item.id));
+
+  const normalizeLang = (lang: keyof LocalizedContent) => {
+    const section = content[lang].specialists;
+    const hasDemoSpecialists = section.items.some(item => demoIds.has(item.id));
+    const hasRealSpecialists = section.items.some(item => specialistIds.has(item.id));
+    const normalizedServices = normalizeServiceItems(content[lang].services.items);
+
+    if (!hasDemoSpecialists && !hasRealSpecialists) {
+      return {
+        ...content[lang],
+        services: {
+          ...content[lang].services,
+          items: normalizedServices,
+        },
+      };
+    }
+
+    return {
+      ...content[lang],
+      services: {
+        ...content[lang].services,
+        items: normalizedServices,
+      },
+      specialists: {
+        ...section,
+        items: realSpecialists,
+      },
+    };
+  };
+
+  return {
+    hy: normalizeLang("hy"),
+    ru: normalizeLang("ru"),
+    en: normalizeLang("en"),
+  };
+};
+
 export const defaultContent: LocalizedContent = {
   hy: {
     hero: {
@@ -60,21 +149,17 @@ export const defaultContent: LocalizedContent = {
       title: "Գեղեցկության ապագայի կառուցում",
       description: "Մեր կողմից մանրակրկիտ ընտրված FDA-ի կողմից հաստատված տեխնոլոգիաներ և մասնագիտացված արձանագրություններ, որոնք նախատեսված են օպտիմալ, բնական տեսք ունեցող արդյունքների համար:",
       items: [
-        { id: "ultraformer", title: "Ultraformer III", description: "Առաջադեմ MMFU տեխնոլոգիա դեմքի լիֆթինգի, մաշկի ձգման և մարմնի կոնտուրավորման համար:", tag: "Ֆլագմանային", href: "/hy/ultraformer", image_url: "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?q=80&w=800&auto=format&fit=crop" },
-        { id: "goldensun", title: "Golden Sun", description: "Բացառիկ Golden Sun պրոցեդուրան ապահովում է շքեղ և շողացող արդյունք:", tag: "Առաջնային", href: "/hy/golden-sun", image_url: "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?q=80&w=800&auto=format&fit=crop" },
-        { id: "smas", title: "SMAS Լիֆթինգ", description: "Ճշգրիտ ուլտրաձայնային ալիքներ, որոնք թիրախավորում են հյուսվածքների խորը շերտերը հիմնարար կառուցվածքային բարձրացման համար:", tag: "Հակատարիքային", image_url: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=800&auto=format&fit=crop" },
-        { id: "body-contouring", title: "Մարմնի Կոնտուրավորում", description: "Նպատակային ճարպի նվազեցում և մաշկի ձգում՝ օգտագործելով համակցված ՌՖ և ուլտրաձայնային ալիքներ:", tag: "Քանդակում", image_url: "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?q=80&w=800&auto=format&fit=crop" },
-        { id: "skin-rejuvenation", title: "Մաշկի Երիտասարդացում", description: "Բջջային մակարդակում թարմացման արձանագրություններ՝ անթերի հյուսվածքի և երանգի համար:", tag: "Էսթետիկ", image_url: "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?q=80&w=800&auto=format&fit=crop" }
+        { id: "ultraformer", title: "Ultraformer III", description: "Առաջադեմ MMFU տեխնոլոգիա դեմքի լիֆթինգի, մաշկի ձգման և մարմնի կոնտուրավորման համար:", tag: "Ֆլագմանային", href: "/hy/ultraformer", image_url: serviceImageById.ultraformer },
+        { id: "goldensun", title: "Golden Sun", description: "Բացառիկ Golden Sun պրոցեդուրան ապահովում է շքեղ և շողացող արդյունք:", tag: "Առաջնային", href: "/hy/golden-sun", image_url: serviceImageById.goldensun },
+        { id: "smas", title: "SMAS Լիֆթինգ", description: "Ճշգրիտ ուլտրաձայնային ալիքներ, որոնք թիրախավորում են հյուսվածքների խորը շերտերը հիմնարար կառուցվածքային բարձրացման համար:", tag: "Հակատարիքային", image_url: serviceImageById.smas },
+        { id: "body-contouring", title: "Մարմնի Կոնտուրավորում", description: "Նպատակային ճարպի նվազեցում և մաշկի ձգում՝ օգտագործելով համակցված ՌՖ և ուլտրաձայնային ալիքներ:", tag: "Քանդակում", image_url: serviceImageById["body-contouring"] },
+        { id: "skin-rejuvenation", title: "Մաշկի Երիտասարդացում", description: "Բջջային մակարդակում թարմացման արձանագրություններ՝ անթերի հյուսվածքի և երանգի համար:", tag: "Էսթետիկ", image_url: serviceImageById["skin-rejuvenation"] }
       ]
     },
     specialists: {
       title: "Համաշխարհային մակարդակի փորձառություն",
       description: "Մեր խորհրդի կողմից հաստատված մաշկաբանների և էսթետիկ բժշկության մասնագետների թիմը նվիրված է բացառիկ արդյունքների ապահովմանը ճշգրտությամբ և հոգատարությամբ:",
-      items: [
-        { id: "elena", name: "Բժ. Ելենա Ռոստովա", role: "Գլխավոր բժշկական տնօրեն", exp: "15+ Տարի", spec: "Հակատարիքային և SMAS Արձանագրություններ", image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=800&auto=format&fit=crop" },
-        { id: "marcus", name: "Բժ. Մարկուս Չեն", role: "Առաջատար էսթետիկ վիրաբույժ", exp: "12+ Տարի", spec: "Մարմնի կոնտուրավորման փորձագետ", image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=800&auto=format&fit=crop" },
-        { id: "sarah", name: "Բժ. Սառա Ալ-Ֆայեդ", role: "Ավագ մաշկաբան", exp: "10+ Տարի", spec: "Մաշկի առաջադեմ երիտասարդացում", image: "https://images.unsplash.com/photo-1594824436951-7f12bc58ec53?q=80&w=800&auto=format&fit=crop" }
-      ]
+      items: realSpecialists
     },
     results: {
       title: "Տեսանելի Փոխակերպում",
@@ -99,21 +184,17 @@ export const defaultContent: LocalizedContent = {
       title: "Создавая будущее красоты",
       description: "Наши тщательно отобранные технологии, одобренные FDA, и специализированные протоколы разработаны для оптимальных, естественных результатов.",
       items: [
-        { id: "ultraformer", title: "Ultraformer III", description: "Передовая технология MMFU для лифтинга лица, подтяжки кожи и контурирования тела.", tag: "Флагманская", href: "/ru/ultraformer", image_url: "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?q=80&w=800&auto=format&fit=crop" },
-        { id: "goldensun", title: "Golden Sun", description: "Эксклюзивная процедура Golden Sun обеспечивает роскошный и сияющий результат.", tag: "Приоритетная", href: "/ru/golden-sun", image_url: "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?q=80&w=800&auto=format&fit=crop" },
-        { id: "smas", title: "SMAS Лифтинг", description: "Прецизионный ультразвук, нацеленный на глубокие слои тканей для фундаментального структурного лифтинга.", tag: "Антивозрастной", image_url: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=800&auto=format&fit=crop" },
-        { id: "body-contouring", title: "Контурирование тела", description: "Целенаправленное уменьшение жировых отложений и подтяжка кожи с использованием комбинированного RF и ультразвука.", tag: "Скульптурирование", image_url: "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?q=80&w=800&auto=format&fit=crop" },
-        { id: "skin-rejuvenation", title: "Омоложение кожи", description: "Протоколы обновления на клеточном уровне для безупречной текстуры и тона.", tag: "Эстетика", image_url: "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?q=80&w=800&auto=format&fit=crop" }
+        { id: "ultraformer", title: "Ultraformer III", description: "Передовая технология MMFU для лифтинга лица, подтяжки кожи и контурирования тела.", tag: "Флагманская", href: "/ru/ultraformer", image_url: serviceImageById.ultraformer },
+        { id: "goldensun", title: "Golden Sun", description: "Эксклюзивная процедура Golden Sun обеспечивает роскошный и сияющий результат.", tag: "Приоритетная", href: "/ru/golden-sun", image_url: serviceImageById.goldensun },
+        { id: "smas", title: "SMAS Лифтинг", description: "Прецизионный ультразвук, нацеленный на глубокие слои тканей для фундаментального структурного лифтинга.", tag: "Антивозрастной", image_url: serviceImageById.smas },
+        { id: "body-contouring", title: "Контурирование тела", description: "Целенаправленное уменьшение жировых отложений и подтяжка кожи с использованием комбинированного RF и ультразвука.", tag: "Скульптурирование", image_url: serviceImageById["body-contouring"] },
+        { id: "skin-rejuvenation", title: "Омоложение кожи", description: "Протоколы обновления на клеточном уровне для безупречной текстуры и тона.", tag: "Эстетика", image_url: serviceImageById["skin-rejuvenation"] }
       ]
     },
     specialists: {
       title: "Экспертиза мирового уровня",
       description: "Наша команда сертифицированных дерматологов и специалистов эстетической медицины стремится обеспечивать исключительные результаты с точностью и заботой.",
-      items: [
-        { id: "elena", name: "Д-р Елена Ростова", role: "Главный медицинский директор", exp: "15+ Лет", spec: "Протоколы Anti-Aging и SMAS", image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=800&auto=format&fit=crop" },
-        { id: "marcus", name: "Д-р Маркус Чен", role: "Ведущий эстетический хирург", exp: "12+ Лет", spec: "Эксперт по контурированию тела", image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=800&auto=format&fit=crop" },
-        { id: "sarah", name: "Д-р Сара Аль-Файед", role: "Старший дерматолог", exp: "10+ Лет", spec: "Передовое омоложение кожи", image: "https://images.unsplash.com/photo-1594824436951-7f12bc58ec53?q=80&w=800&auto=format&fit=crop" }
-      ]
+      items: realSpecialists
     },
     results: {
       title: "Видимая трансформация",
@@ -138,21 +219,17 @@ export const defaultContent: LocalizedContent = {
       title: "Building the Future of Beauty",
       description: "Our carefully selected FDA-approved technologies and specialized protocols designed for optimal, natural-looking results.",
       items: [
-        { id: "ultraformer", title: "Ultraformer III", description: "Advanced MMFU technology for face lifting, skin tightening, and body contouring.", tag: "Flagship", href: "/en/ultraformer", image_url: "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?q=80&w=800&auto=format&fit=crop" },
-        { id: "goldensun", title: "Golden Sun", description: "The exclusive Golden Sun treatment provides a luxurious and radiant finish.", tag: "Featured", href: "/en/golden-sun", image_url: "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?q=80&w=800&auto=format&fit=crop" },
-        { id: "smas", title: "SMAS Lifting", description: "Precision ultrasound targeting deep tissue layers for foundational structural lift.", tag: "Anti-Aging", image_url: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=800&auto=format&fit=crop" },
-        { id: "body-contouring", title: "Body Contouring", description: "Targeted fat reduction and skin tightening utilizing combined RF and ultrasound.", tag: "Sculpting", image_url: "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?q=80&w=800&auto=format&fit=crop" },
-        { id: "skin-rejuvenation", title: "Skin Rejuvenation", description: "Cellular level renewal protocols for flawless texture and tone.", tag: "Aesthetic", image_url: "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?q=80&w=800&auto=format&fit=crop" }
+        { id: "ultraformer", title: "Ultraformer III", description: "Advanced MMFU technology for face lifting, skin tightening, and body contouring.", tag: "Flagship", href: "/en/ultraformer", image_url: serviceImageById.ultraformer },
+        { id: "goldensun", title: "Golden Sun", description: "The exclusive Golden Sun treatment provides a luxurious and radiant finish.", tag: "Featured", href: "/en/golden-sun", image_url: serviceImageById.goldensun },
+        { id: "smas", title: "SMAS Lifting", description: "Precision ultrasound targeting deep tissue layers for foundational structural lift.", tag: "Anti-Aging", image_url: serviceImageById.smas },
+        { id: "body-contouring", title: "Body Contouring", description: "Targeted fat reduction and skin tightening utilizing combined RF and ultrasound.", tag: "Sculpting", image_url: serviceImageById["body-contouring"] },
+        { id: "skin-rejuvenation", title: "Skin Rejuvenation", description: "Cellular level renewal protocols for flawless texture and tone.", tag: "Aesthetic", image_url: serviceImageById["skin-rejuvenation"] }
       ]
     },
     specialists: {
       title: "World-Class Expertise",
       description: "Our team of board-certified dermatologists and aesthetic medicine specialists are dedicated to delivering exceptional results with precision and care.",
-      items: [
-        { id: "elena", name: "Dr. Elena Rostova", role: "Chief Medical Director", exp: "15+ Years", spec: "Anti-Aging & SMAS Protocols", image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=800&auto=format&fit=crop" },
-        { id: "marcus", name: "Dr. Marcus Chen", role: "Lead Aesthetic Surgeon", exp: "12+ Years", spec: "Body Contouring Expert", image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=800&auto=format&fit=crop" },
-        { id: "sarah", name: "Dr. Sarah Al-Fayed", role: "Senior Dermatologist", exp: "10+ Years", spec: "Advanced Skin Rejuvenation", image: "https://images.unsplash.com/photo-1594824436951-7f12bc58ec53?q=80&w=800&auto=format&fit=crop" }
-      ]
+      items: realSpecialists
     },
     results: {
       title: "Visible Transformation",
@@ -208,7 +285,7 @@ export const loadContentFromDB = async () => {
   try {
     const docSnap = await getDoc(doc(db, 'site', 'content'));
     if (docSnap.exists()) {
-      useContentStore.setState({ content: docSnap.data() as LocalizedContent });
+      useContentStore.setState({ content: normalizeSpecialists(docSnap.data() as LocalizedContent) });
     }
   } catch (e) {
     console.error("Failed to load content from DB", e);

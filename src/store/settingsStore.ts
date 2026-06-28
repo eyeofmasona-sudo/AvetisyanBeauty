@@ -20,11 +20,38 @@ export interface SiteSettings {
   heroVideoMobileUrl?: string;
 }
 
+export const defaultGalleryVideos: SiteVideo[] = [
+  {
+    id: 'clinic-video-1',
+    title: '',
+    description: '',
+    videoUrl: '/videos/gallery/clinic-video-1.mp4',
+    order: 1,
+    isActive: true,
+  },
+  {
+    id: 'clinic-video-2',
+    title: '',
+    description: '',
+    videoUrl: '/videos/gallery/clinic-video-2.mp4',
+    order: 2,
+    isActive: true,
+  },
+  {
+    id: 'clinic-video-3',
+    title: '',
+    description: '',
+    videoUrl: '/videos/gallery/clinic-video-3.mp4',
+    order: 3,
+    isActive: true,
+  },
+];
+
 const defaultSettings: SiteSettings = {
   whatsappNumber: '+37433101077',
-  videos: [],
+  videos: defaultGalleryVideos,
   heroVideoUrl: '/videos/hero-background.mp4',
-  heroVideoMobileUrl: '/videos/hero-background.mp4'
+  heroVideoMobileUrl: '/videos/hero-background-mobile.mp4'
 };
 
 interface SettingsState {
