@@ -3,9 +3,11 @@ import { defaultGalleryVideos, useSettingsStore } from '../store/settingsStore';
 
 export function VideoCarousel() {
   const { settings } = useSettingsStore();
-  const activeVideos = settings?.videos?.filter(v => v.isActive && v.id !== 'clinic-video-2').sort((a, b) => a.order - b.order) || [];
+  const activeVideos = settings?.videos
+    ?.filter(v => v.isActive && v.id !== 'clinic-video-2' && Boolean(v.videoUrl?.trim()))
+    .sort((a, b) => a.order - b.order) || [];
   const activeVideoIds = new Set(activeVideos.map(video => video.id));
-  const fallbackVideos = defaultGalleryVideos.filter(video => video.id !== 'clinic-video-2' && !activeVideoIds.has(video.id));
+  const fallbackVideos = defaultGalleryVideos.filter(video => video.id !== 'clinic-video-2' && video.videoUrl && !activeVideoIds.has(video.id));
   const videos = [...activeVideos, ...fallbackVideos].sort((a, b) => a.order - b.order);
 
   if (!videos || videos.length === 0) return null;

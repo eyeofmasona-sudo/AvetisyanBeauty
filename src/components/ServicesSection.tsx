@@ -63,12 +63,12 @@ export function ServicesSection() {
                   navigate(service.href);
                 }
               }}
-              className={`group relative min-h-[420px] md:min-h-[460px] overflow-hidden rounded-[1.5rem] bg-graphite shadow-sm ring-1 ring-graphite/10 transition-all duration-500 md:hover:-translate-y-1 md:hover:shadow-2xl md:hover:shadow-graphite/15 ${
+              className={`group relative flex flex-col overflow-hidden rounded-[1.25rem] bg-graphite shadow-sm ring-1 ring-graphite/10 transition-all duration-500 md:min-h-[460px] md:rounded-[1.5rem] md:hover:-translate-y-1 md:hover:shadow-2xl md:hover:shadow-graphite/15 ${
                 index < 2 ? "md:col-span-3" : "md:col-span-2"
               } ${service.href ? "cursor-pointer" : ""}`}
             >
               {service.image_url ? (
-                <div className="absolute inset-0">
+                <div className="relative aspect-[4/3] w-full overflow-hidden md:absolute md:inset-0 md:aspect-auto">
                   <img 
                     src={service.image_url || undefined} 
                     alt={service.title} 
@@ -79,33 +79,33 @@ export function ServicesSection() {
                   />
                 </div>
               ) : (
-                <div className="absolute inset-0 bg-graphite flex items-center justify-center">
+                <div className="relative aspect-[4/3] w-full bg-graphite flex items-center justify-center md:absolute md:inset-0 md:aspect-auto">
                   <span className="text-white/40 text-sm tracking-widest uppercase">No Image</span>
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/5" />
-              <div className="absolute inset-0 bg-gold/0 transition-colors duration-500 md:group-hover:bg-gold/10" />
+              <div className="hidden md:block absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/5" />
+              <div className="hidden md:block absolute inset-0 bg-gold/0 transition-colors duration-500 md:group-hover:bg-gold/10" />
 
-              <div className="relative z-10 flex h-full flex-col justify-between p-5 sm:p-6 md:p-7 text-white">
-                <div className="flex items-start justify-between gap-4">
-                  <span className="max-w-[70%] rounded-full border border-white/20 bg-black/20 px-4 py-2 text-[11px] font-medium uppercase tracking-[0.18em] text-gold backdrop-blur">
+              <div className="relative z-10 flex flex-1 flex-col justify-between gap-5 bg-gradient-to-b from-graphite to-black p-4 text-white md:h-full md:bg-transparent md:p-7">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="max-w-[calc(100%-3rem)] rounded-full border border-white/20 bg-black/20 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-gold backdrop-blur md:max-w-[70%] md:px-4 md:py-2 md:text-[11px] md:tracking-[0.18em]">
                     {service.tag}
                   </span>
                   {service.href && (
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur transition-all duration-300 md:group-hover:border-gold md:group-hover:bg-gold md:group-hover:text-graphite">
-                      <ArrowUpRight size={18} />
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur transition-all duration-300 md:h-10 md:w-10 md:group-hover:border-gold md:group-hover:bg-gold md:group-hover:text-graphite">
+                      <ArrowUpRight size={17} />
                     </span>
                   )}
                 </div>
 
                 <div>
-                  <div className="mb-3 flex items-end justify-between gap-4">
-                    <h4 className="font-display text-3xl md:text-4xl leading-none text-white">
+                  <div className="mb-2 flex items-end justify-between gap-3 md:mb-3 md:gap-4">
+                    <h4 className="font-display max-w-full break-words text-2xl leading-tight text-white md:text-4xl md:leading-none">
                       {service.title}
                     </h4>
                     {service.price && <span className="shrink-0 text-sm font-medium text-gold">{service.price}</span>}
                   </div>
-                  <p className="max-w-xl text-sm md:text-base font-light leading-relaxed text-white/78">
+                  <p className="max-w-full break-words text-[13px] font-light leading-relaxed text-white/78 md:max-w-xl md:text-base">
                     {service.description}
                   </p>
                 </div>

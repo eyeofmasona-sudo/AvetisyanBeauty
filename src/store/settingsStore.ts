@@ -40,10 +40,14 @@ export const defaultGalleryVideos: SiteVideo[] = [
 ];
 
 const blockedVideoIds = new Set(['clinic-video-2']);
+const blockedVideoUrls = new Set(['/videos/gallery/clinic-video-2.mp4']);
 
 const sanitizeVideos = (videos: SiteVideo[] = []) =>
   videos
-    .filter(video => !blockedVideoIds.has(video.id))
+    .filter(video => {
+      const videoUrl = video.videoUrl?.trim();
+      return videoUrl && !blockedVideoIds.has(video.id) && !blockedVideoUrls.has(videoUrl);
+    })
     .sort((a, b) => a.order - b.order);
 
 const defaultSettings: SiteSettings = {
