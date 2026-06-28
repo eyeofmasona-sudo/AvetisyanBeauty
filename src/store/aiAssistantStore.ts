@@ -1,5 +1,17 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { db } from '../lib/firebase';
+import {
+  collection,
+  doc,
+  onSnapshot,
+  setDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  orderBy,
+  Unsubscribe,
+} from 'firebase/firestore';
 
 export type AIStatus = 'new' | 'answered' | 'needs_human' | 'booked' | 'ignored';
 export type AIMode = 'draft_only' | 'approval_required' | 'auto_reply';
@@ -73,19 +85,19 @@ interface AIAssistantState {
   knowledgeBase: AIKnowledgeItem[];
   threads: AIThread[];
   templates: AIReplyTemplate[];
-  
-  updateSettings: (settings: Partial<AIAssistantSettings>) => void;
-  addKnowledgeItem: (item: Omit<AIKnowledgeItem, 'id' | 'created_at' | 'updated_at'>) => void;
-  updateKnowledgeItem: (id: string, item: Partial<AIKnowledgeItem>) => void;
-  deleteKnowledgeItem: (id: string) => void;
-  
-  addThread: (thread: Omit<AIThread, 'id' | 'created_at' | 'updated_at' | 'messages'>) => void;
-  addMessage: (threadId: string, message: Omit<AIMessage, 'id' | 'created_at'>) => void;
-  updateMessageStatus: (threadId: string, messageId: string, status: AIStatus, requires_human?: boolean) => void;
-  approveMessage: (threadId: string, messageId: string, finalReply: string) => void;
-  
+
+  updateSettings: (settings: Partial<AIAssistantSettings>) => Promise<void>;
+  addKnowledgeItem: (item: Omit<AIKnowledgeItem, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateKnowledgeItem: (id: string, item: Partial<AIKnowledgeItem>) => Promise<void>;
+  deleteKnowledgeItem: (id: string) => Promise<void>;
+
+  updateMessageStatus: (threadId: string, messageId: string, status: AIStatus, requires_human?: boolean) => Promise<void>;
+  sendReply: (threadId: string, messageId: string, finalReply: string) => Promise<void>;
+
   addTemplate: (template: Omit<AIReplyTemplate, 'id'>) => void;
   updateTemplate: (id: string, template: Partial<AIReplyTemplate>) => void;
+
+  subscribeAIData: () => () => void;
 }
 
 const defaultSettings: AIAssistantSettings = {
@@ -110,126 +122,131 @@ const defaultTemplates: AIReplyTemplate[] = [
   }
 ];
 
-export const useAIAssistantStore = create<AIAssistantState>()(
-  persist(
-    (set, get) => ({
-      settings: defaultSettings,
-      knowledgeBase: [],
-      threads: [],
-      templates: defaultTemplates,
+// Per-thread message subcollection listeners, keyed by thread id, so we can
+// tear them down when the thread list changes or the module unmounts.
+let messageUnsubscribers: Record<string, Unsubscribe> = {};
 
-      updateSettings: (newSettings) => set((state) => ({
-        settings: { ...state.settings, ...newSettings }
-      })),
+export const useAIAssistantStore = create<AIAssistantState>()((set, get) => ({
+  settings: defaultSettings,
+  knowledgeBase: [],
+  threads: [],
+  templates: defaultTemplates,
 
-      addKnowledgeItem: (item) => set((state) => ({
-        knowledgeBase: [
-          ...state.knowledgeBase,
-          {
-            ...item,
-            id: Math.random().toString(36).substring(2, 9),
-            created_at: Date.now(),
-            updated_at: Date.now(),
-          }
-        ]
-      })),
+  updateSettings: async (newSettings) => {
+    const settings = { ...get().settings, ...newSettings };
+    set({ settings });
+    await setDoc(doc(db, 'site', 'ai_settings'), settings, { merge: true });
+  },
 
-      updateKnowledgeItem: (id, item) => set((state) => ({
-        knowledgeBase: state.knowledgeBase.map((k) =>
-          k.id === id ? { ...k, ...item, updated_at: Date.now() } : k
-        )
-      })),
+  addKnowledgeItem: async (item) => {
+    const now = Date.now();
+    await addDoc(collection(db, 'ai_knowledge'), { ...item, created_at: now, updated_at: now });
+  },
 
-      deleteKnowledgeItem: (id) => set((state) => ({
-        knowledgeBase: state.knowledgeBase.filter((k) => k.id !== id)
-      })),
+  updateKnowledgeItem: async (id, item) => {
+    await updateDoc(doc(db, 'ai_knowledge', id), { ...item, updated_at: Date.now() });
+  },
 
-      addThread: (thread) => set((state) => ({
-        threads: [
-          {
-            ...thread,
-            id: Math.random().toString(36).substring(2, 9),
-            messages: [],
-            created_at: Date.now(),
-            updated_at: Date.now(),
-          },
-          ...state.threads
-        ]
-      })),
+  deleteKnowledgeItem: async (id) => {
+    await deleteDoc(doc(db, 'ai_knowledge', id));
+  },
 
-      addMessage: (threadId, message) => set((state) => ({
-        threads: state.threads.map((t) => {
-          if (t.id === threadId) {
-            return {
-              ...t,
-              updated_at: Date.now(),
-              messages: [
-                ...t.messages,
-                {
-                  ...message,
-                  id: Math.random().toString(36).substring(2, 9),
-                  created_at: Date.now()
-                }
-              ]
-            };
-          }
-          return t;
-        })
-      })),
+  updateMessageStatus: async (threadId, messageId, status, requires_human) => {
+    await updateDoc(doc(db, 'ai_threads', threadId, 'messages', messageId), {
+      status,
+      ...(requires_human !== undefined ? { requires_human } : {}),
+    });
+    await updateDoc(doc(db, 'ai_threads', threadId), { status });
+  },
 
-      updateMessageStatus: (threadId, messageId, status, requires_human) => set((state) => ({
-        threads: state.threads.map((t) => {
-          if (t.id === threadId) {
-            return {
-              ...t,
-              status: status, // update thread status as well
-              messages: t.messages.map((m) =>
-                m.id === messageId
-                  ? { ...m, status, requires_human: requires_human ?? m.requires_human }
-                  : m
-              )
-            };
-          }
-          return t;
-        })
-      })),
-
-      approveMessage: (threadId, messageId, finalReply) => set((state) => ({
-        threads: state.threads.map((t) => {
-          if (t.id === threadId) {
-            return {
-              ...t,
-              status: 'answered',
-              messages: t.messages.map((m) =>
-                m.id === messageId
-                  ? { ...m, status: 'answered', final_reply: finalReply }
-                  : m
-              )
-            };
-          }
-          return t;
-        })
-      })),
-
-      addTemplate: (template) => set((state) => ({
-        templates: [
-          ...state.templates,
-          {
-            ...template,
-            id: Math.random().toString(36).substring(2, 9)
-          }
-        ]
-      })),
-
-      updateTemplate: (id, template) => set((state) => ({
-        templates: state.templates.map((t) =>
-          t.id === id ? { ...t, ...template } : t
-        )
-      })),
-
-    }),
-    {
-      name: 'ai-assistant-storage',
+  sendReply: async (threadId, messageId, finalReply) => {
+    const res = await fetch('/api/ai-messaging/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ threadId, messageId, finalReply }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `Failed to send reply (${res.status})`);
     }
-  )
-);
+  },
+
+  addTemplate: (template) => set((state) => ({
+    templates: [
+      ...state.templates,
+      {
+        ...template,
+        id: Math.random().toString(36).substring(2, 9)
+      }
+    ]
+  })),
+
+  updateTemplate: (id, template) => set((state) => ({
+    templates: state.templates.map((t) =>
+      t.id === id ? { ...t, ...template } : t
+    )
+  })),
+
+  subscribeAIData: () => {
+    const unsubSettings = onSnapshot(doc(db, 'site', 'ai_settings'), (snap) => {
+      if (snap.exists()) {
+        set({ settings: { ...defaultSettings, ...(snap.data() as Partial<AIAssistantSettings>) } });
+      }
+    });
+
+    const unsubKnowledge = onSnapshot(collection(db, 'ai_knowledge'), (snap) => {
+      const items = snap.docs.map((d) => ({ id: d.id, ...d.data() } as AIKnowledgeItem));
+      set({ knowledgeBase: items });
+    });
+
+    const unsubThreads = onSnapshot(
+      query(collection(db, 'ai_threads'), orderBy('updated_at', 'desc')),
+      (snap) => {
+        const existingThreads = get().threads;
+        const threadsById = new Map(existingThreads.map((t) => [t.id, t]));
+
+        const seenIds = new Set<string>();
+        const nextThreads: AIThread[] = snap.docs.map((d) => {
+          seenIds.add(d.id);
+          const data = d.data() as Omit<AIThread, 'id' | 'messages'>;
+          const previous = threadsById.get(d.id);
+          return { id: d.id, ...data, messages: previous?.messages || [] };
+        });
+        set({ threads: nextThreads });
+
+        // Drop listeners for threads that no longer exist.
+        for (const id of Object.keys(messageUnsubscribers)) {
+          if (!seenIds.has(id)) {
+            messageUnsubscribers[id]();
+            delete messageUnsubscribers[id];
+          }
+        }
+
+        // Add listeners for newly-seen threads.
+        for (const threadId of seenIds) {
+          if (messageUnsubscribers[threadId]) continue;
+          messageUnsubscribers[threadId] = onSnapshot(
+            query(collection(db, 'ai_threads', threadId, 'messages'), orderBy('created_at', 'asc')),
+            (msgSnap) => {
+              const messages = msgSnap.docs.map((m) => ({ id: m.id, ...m.data() } as AIMessage));
+              set((state) => ({
+                threads: state.threads.map((t) => (t.id === threadId ? { ...t, messages } : t)),
+              }));
+            }
+          );
+        }
+      }
+    );
+
+    return () => {
+      unsubSettings();
+      unsubKnowledge();
+      unsubThreads();
+      for (const id of Object.keys(messageUnsubscribers)) {
+        messageUnsubscribers[id]();
+      }
+      messageUnsubscribers = {};
+    };
+  },
+}));

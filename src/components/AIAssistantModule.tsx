@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-  Settings2, BookOpen, MessageSquare, 
-  Inbox as InboxIcon, UserCheck, BarChart3, Save, 
+import {
+  Settings2, BookOpen, MessageSquare,
+  Inbox as InboxIcon, UserCheck, BarChart3, Save,
   CheckCircle, XCircle, Bot
 } from 'lucide-react';
 import { useAIAssistantStore } from '../store/aiAssistantStore';
@@ -15,8 +15,13 @@ import { Analytics } from '../pages/admin/ai-assistant/Analytics';
 export function AIAssistantModule() {
   const { t } = useTranslation();
   const [activeSubTab, setActiveSubTab] = useState('settings');
-  
-  const { settings } = useAIAssistantStore();
+
+  const { settings, subscribeAIData } = useAIAssistantStore();
+
+  useEffect(() => {
+    const unsubscribe = subscribeAIData();
+    return unsubscribe;
+  }, [subscribeAIData]);
 
   const subTabs = [
     { id: 'settings', label: 'Settings', icon: Settings2 },

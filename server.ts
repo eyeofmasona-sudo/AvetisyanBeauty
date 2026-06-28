@@ -49,8 +49,10 @@ import { GoogleGenAI, Modality, GenerateVideosOperation } from "@google/genai";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
-import { instagramWebhookRoute } from "./src/server/webhooks/instagramWebhookRoute";
-import { whatsappWebhookRoute } from "./src/server/webhooks/whatsappWebhookRoute";
+import { createInstagramWebhookRoute } from "./src/server/webhooks/instagramWebhookRoute";
+import { createWhatsappWebhookRoute } from "./src/server/webhooks/whatsappWebhookRoute";
+import { sendInstagramText, sendWhatsAppText, MetaSendError } from "./src/server/messaging/metaSend";
+import { markMessageAnswered } from "./src/server/messaging/threadStore";
 
 dotenv.config();
 
@@ -644,55 +646,53 @@ async function startServer() {
   });
 
   // 9. AI Messaging Webhooks (Instagram & WhatsApp)
-  app.use("/api/webhooks/instagram", instagramWebhookRoute);
-  app.use("/api/webhooks/whatsapp", whatsappWebhookRoute);
+  app.use("/api/webhooks/instagram", createInstagramWebhookRoute({ db, getAi }));
+  app.use("/api/webhooks/whatsapp", createWhatsappWebhookRoute({ db, getAi }));
 
-  // AI Classification and Generation Endpoint
+  // AI Classification and Generation Endpoint (manual/preview use from the admin UI)
   app.post("/api/ai-messaging/process", async (req, res) => {
     try {
-      const { message, settings, knowledgeBase } = req.body;
+      const { message, knowledgeBase } = req.body;
       const ai = getAi();
-      
-      const systemInstruction = `
-        You are an AI assistant for Avetisyan Beauty Clinic.
-        Your task is to answer simple and template questions from clients based on the approved knowledge base.
-        You are not a doctor. You do not diagnose. You do not prescribe treatment. You do not guarantee results.
-        If the question is individual, medical, or unclear — you must set requires_human to true.
-        Answer briefly, politely, and in the language of the client.
-        Always suggest a consultation or booking if appropriate.
-        
-        Analyze the incoming message and output JSON ONLY with the following schema:
-        {
-          "intent": "price_question | booking_request | address_question | working_hours | service_question | ... | human_required | unknown",
-          "detected_language": "hy | ru | en",
-          "requires_human": boolean,
-          "confidence": number (0 to 1),
-          "suggested_reply": "Your reply based on knowledge base, or empty if requires_human is true"
-        }
-      `;
-
-      // Simplified call to Gemini (using JSON mode if supported, or standard generation)
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: `Client Message: "${message}"\n\nKnowledge Base:\n${JSON.stringify(knowledgeBase)}`,
-        config: { 
-          systemInstruction,
-          responseMimeType: "application/json"
-        },
-      });
-      
-      const resultText = response.text;
-      let parsed = { requires_human: true, suggested_reply: "Error parsing AI response" };
-      try {
-        parsed = JSON.parse(resultText);
-      } catch(e) {
-        console.error("Failed to parse JSON from AI", e);
-      }
-      
+      const { draftAIReply } = await import("./src/server/messaging/aiDraft");
+      const parsed = await draftAIReply(ai, message, knowledgeBase || []);
       res.json(parsed);
     } catch (error: any) {
       console.error("AI Messaging Process Error:", error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Sends an approved reply to the customer via the real channel (WhatsApp/Instagram)
+  // and records it on the thread. Requires the relevant Meta credentials to be set;
+  // returns a clear error otherwise instead of silently "succeeding".
+  app.post("/api/ai-messaging/send", async (req, res) => {
+    try {
+      const { threadId, messageId, finalReply } = req.body;
+      if (!threadId || !messageId || !finalReply) {
+        return res.status(400).json({ error: "threadId, messageId and finalReply are required" });
+      }
+
+      const threadSnap = await db.collection('ai_threads').doc(threadId).get();
+      if (!threadSnap.exists) {
+        return res.status(404).json({ error: "Thread not found" });
+      }
+      const thread = threadSnap.data() as any;
+
+      if (thread.channel === 'whatsapp') {
+        await sendWhatsAppText(thread.customer_handle, finalReply);
+      } else if (thread.channel === 'instagram') {
+        await sendInstagramText(thread.customer_handle, finalReply);
+      } else {
+        return res.status(400).json({ error: `Unknown channel: ${thread.channel}` });
+      }
+
+      await markMessageAnswered(db, threadId, messageId, finalReply);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("AI Messaging Send Error:", error);
+      const status = error instanceof MetaSendError ? 502 : 500;
+      res.status(status).json({ error: error.message || "Failed to send reply" });
     }
   });
 
