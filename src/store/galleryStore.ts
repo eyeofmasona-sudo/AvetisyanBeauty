@@ -43,8 +43,8 @@ const defaultCases: GalleryCase[] = [
     protocol: "SMAS Lifting Protocol",
     patientDesc: "Lower face tightening / 1 Session",
     category: "ultraformer",
-    beforeImage: "/images/results/face-before.png",
-    afterImage: "/images/results/face-after.png"
+    beforeImage: "/images/results/smas-before.png",
+    afterImage: "/images/results/smas-after.png"
   },
   {
     id: "4",
@@ -62,8 +62,9 @@ const normalizeGalleryCases = (cases: GalleryCase[] = defaultCases) =>
   cases.map((item) => {
     const defaultCase = defaultCaseById.get(item.id);
     const hasExternalImage = [item.beforeImage, item.afterImage].some(image => image?.includes("images.unsplash.com"));
+    const hasOldSmasImages = item.id === "3" && [item.beforeImage, item.afterImage].some(image => image?.includes("/images/results/face-"));
 
-    if (!defaultCase || !hasExternalImage) {
+    if (!defaultCase || (!hasExternalImage && !hasOldSmasImages)) {
       return item;
     }
 
