@@ -42,22 +42,22 @@ export function ResultsSection() {
             afterImage={firstCase?.afterImage}
           />
 
-          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-8 bg-gradient-to-t from-white/90 via-white/50 to-transparent flex flex-col md:flex-row justify-between items-start md:items-end gap-4 pointer-events-none rounded-b-3xl">
+          <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-white/90 via-white/50 to-transparent flex flex-col md:flex-row justify-between items-start md:items-end gap-4 pointer-events-none rounded-b-3xl">
             <div>
-              <h4 className="text-graphite font-medium text-lg sm:text-xl mb-1 drop-shadow-sm">
+              <h4 className="text-graphite font-medium text-xl mb-1 drop-shadow-sm">
                 {firstCase?.protocol || t("results.protocol")}
               </h4>
-              <p className="text-graphite/70 text-xs sm:text-sm drop-shadow-sm">
+              <p className="text-graphite/70 text-sm drop-shadow-sm">
                 {firstCase?.patientDesc || t("results.patient")}
               </p>
             </div>
-            <button className="px-4 sm:px-6 py-2 bg-white/50 backdrop-blur-md rounded-full text-graphite text-xs sm:text-sm font-medium hover:bg-white transition-colors border border-graphite/10 pointer-events-auto shadow-sm">
+            <button className="px-6 py-2 bg-white/50 backdrop-blur-md rounded-full text-graphite text-sm font-medium hover:bg-white transition-colors border border-graphite/10 pointer-events-auto shadow-sm">
               {t("results.btn")}
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 mt-12 md:mt-16 border-t border-graphite/10 pt-12 md:pt-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-16 border-t border-graphite/10 pt-16">
           {[
             { metric: "98%", label: t("results.stats.satisfaction") },
             { metric: "10k+", label: t("results.stats.procedures") },
@@ -70,12 +70,12 @@ export function ResultsSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1, duration: 0.8 }}
-              className="text-center md:text-left md:border-l border-graphite/10 md:pl-6"
+              className="text-center md:text-left border-l border-graphite/10 pl-6"
             >
-              <div className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-graphite font-medium mb-2">
+              <div className="font-display text-3xl md:text-4xl lg:text-5xl text-graphite font-medium mb-2">
                 {stat.metric}
               </div>
-              <div className="text-gold text-[10px] sm:text-sm tracking-wider uppercase">
+              <div className="text-gold text-sm tracking-wider uppercase">
                 {stat.label}
               </div>
             </motion.div>

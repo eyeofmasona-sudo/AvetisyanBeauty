@@ -174,40 +174,22 @@ const resources = {
         "diplomas": "Դիպլոմներ",
         "certificates": "Վկայականներ",
         "items": {
-          "lika": {
-            "name": "Լիկա Պետրոսյան",
-            "role": "",
-            "exp": "",
-            "spec": ""
-          },
-          "maria": {
-            "name": "Մարիա Ավետիսյան",
-            "role": "",
-            "exp": "",
-            "spec": ""
-          },
-          "lilit": {
-            "name": "Լիլիթ Հովհանիսյան",
-            "role": "",
-            "exp": "",
-            "spec": ""
-          },
           "elena": {
             "name": "Անուն Ազգանուն",
             "role": "Գլխավոր մասնագետ",
-            "exp": "—",
+            "exp": "",
             "spec": "Դեմքի խնամք և երիտասարդացում"
           },
           "marcus": {
             "name": "Անուն Ազգանուն",
             "role": "Էսթետիկ կոսմետոլոգ",
-            "exp": "—",
+            "exp": "",
             "spec": "Մարմնի խնամք և սարքային մեթոդներ"
           },
           "sarah": {
             "name": "Անուն Ազգանուն",
             "role": "Մաշկի խնամքի մասնագետ",
-            "exp": "—",
+            "exp": "",
             "spec": "Մաշկի որակ, երանգ և խնամք"
           }
         }
@@ -470,23 +452,23 @@ const resources = {
         "diplomas": "Дипломы",
         "certificates": "Сертификаты",
         "items": {
-          "lika": {
-            "name": "Լիկա Պետրոսյան",
-            "role": "",
+          "elena": {
+            "name": "Имя Фамилия",
+            "role": "Главный специалист",
             "exp": "",
-            "spec": ""
+            "spec": "Уход за лицом и омоложение"
           },
-          "maria": {
-            "name": "Մարիա Ավետիսյան",
-            "role": "",
+          "marcus": {
+            "name": "Имя Фамилия",
+            "role": "Эстетический косметолог",
             "exp": "",
-            "spec": ""
+            "spec": "Уход за телом и аппаратные методы"
           },
-          "lilit": {
-            "name": "Լիլիթ Հովհանիսյան",
-            "role": "",
+          "sarah": {
+            "name": "Имя Фамилия",
+            "role": "Специалист по уходу за кожей",
             "exp": "",
-            "spec": ""
+            "spec": "Качество, тон и уход за кожей"
           }
         }
       },
@@ -524,7 +506,7 @@ const resources = {
         "phonePlace": "Номер телефона",
         "confirmBtn": "Подтвердить запись",
         "backBtn": "← Назад",
-        "success": "Запись подтверждена!"
+        "success": "Ваша заявка на запись готова к отправке."
       },
       "ultraformer": {
         "badge": "Аппаратная косметология",
@@ -748,23 +730,23 @@ const resources = {
         "diplomas": "Diplomas",
         "certificates": "Certificates",
         "items": {
-          "lika": {
-            "name": "Լիկա Պետրոսյան",
-            "role": "",
+          "elena": {
+            "name": "Name Surname",
+            "role": "Lead Specialist",
             "exp": "",
-            "spec": ""
+            "spec": "Facial Care & Rejuvenation"
           },
-          "maria": {
-            "name": "Մարիա Ավետիսյան",
-            "role": "",
+          "marcus": {
+            "name": "Name Surname",
+            "role": "Aesthetic Cosmetologist",
             "exp": "",
-            "spec": ""
+            "spec": "Body Care & Device-Based Methods"
           },
-          "lilit": {
-            "name": "Լիլիթ Հովհանիսյան",
-            "role": "",
+          "sarah": {
+            "name": "Name Surname",
+            "role": "Skincare Specialist",
             "exp": "",
-            "spec": ""
+            "spec": "Skin Quality, Tone & Care"
           }
         }
       },
@@ -802,7 +784,7 @@ const resources = {
         "phonePlace": "Phone Number",
         "confirmBtn": "Confirm Booking",
         "backBtn": "← Back",
-        "success": "Booking confirmed!"
+        "success": "Your booking request is ready to send."
       },
       "ultraformer": {
         "badge": "Advanced Device",

@@ -1,7 +1,8 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { PlayCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useContentStore } from '../store/contentStore';
+import { useContentStore, defaultContent } from '../store/contentStore';
 import { useParams } from 'react-router-dom';
 
 export function SpecialistsSection() {
@@ -33,7 +34,7 @@ export function SpecialistsSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:[direction:rtl]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {specialists.map((spec, i) => (
             <motion.div
               key={spec.id}
@@ -41,33 +42,34 @@ export function SpecialistsSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1, duration: 0.8 }}
-              className="group cursor-pointer md:[direction:ltr]"
+              className="group cursor-pointer"
             >
-              <div className="relative w-full aspect-[3/4] bg-pearl rounded-3xl overflow-hidden border border-graphite/5 mb-4">
-                {spec.image ? (
-                  <img
-                    src={spec.image}
-                    alt={`${spec.name} — специалист Avetisyan Beauty Clinic`}
-                    className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]"
-                    loading="lazy"
-                    decoding="async"
-                    sizes="(min-width: 768px) 33vw, 100vw"
-                  />
-                ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-graphite/10 via-pearl to-gold/10" />
-                )}
+              <div
+                className="relative w-full aspect-[3/4] bg-pearl rounded-3xl overflow-hidden border border-graphite/5 bg-cover bg-center mb-4"
+                style={spec.image || defaultContent['hy'].specialists.items.find(s => s.id === spec.id)?.image ? { backgroundImage: `url("${spec.image || defaultContent['hy'].specialists.items.find(s => s.id === spec.id)?.image}")` } : undefined}
+              >
                 <div className="absolute inset-0 bg-gradient-to-t from-graphite/90 via-graphite/20 to-transparent opacity-90" />
 
                 <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                  <div className="flex gap-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
+                    <span className="px-3 py-1 bg-black/40 backdrop-blur-md rounded-full text-[10px] uppercase tracking-widest text-white/90 border border-white/10">
+                      {t("specialists.diplomas")}
+                    </span>
+                    <span className="px-3 py-1 bg-black/40 backdrop-blur-md rounded-full text-[10px] uppercase tracking-widest text-white/90 border border-white/10">
+                      {t("specialists.certificates")}
+                    </span>
+                  </div>
                   <h4 className="font-display text-3xl text-white font-medium mb-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                     {spec.name}
                   </h4>
-                  {spec.role ? (
-                    <p className="text-white/80 text-sm tracking-widest uppercase font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                      {spec.role}
-                    </p>
-                  ) : null}
+                  <p className="text-white/80 text-sm tracking-widest uppercase font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                    {spec.role}
+                  </p>
                 </div>
+              </div>
+              
+              <div className="text-center px-2">
+                <p className="text-gold font-medium text-lg tracking-wide uppercase">{spec.spec}</p>
               </div>
             </motion.div>
           ))}

@@ -20,41 +20,11 @@ export interface SiteSettings {
   heroVideoMobileUrl?: string;
 }
 
-export const defaultGalleryVideos: SiteVideo[] = [
-  {
-    id: 'clinic-video-1',
-    title: '',
-    description: '',
-    videoUrl: '/videos/gallery/clinic-video-1.mp4',
-    order: 1,
-    isActive: true,
-  },
-  {
-    id: 'clinic-video-3',
-    title: '',
-    description: '',
-    videoUrl: '/videos/gallery/clinic-video-3.mp4',
-    order: 2,
-    isActive: true,
-  },
-];
-
-const blockedVideoIds = new Set(['clinic-video-2']);
-const blockedVideoUrls = new Set(['/videos/gallery/clinic-video-2.mp4']);
-
-const sanitizeVideos = (videos: SiteVideo[] = []) =>
-  videos
-    .filter(video => {
-      const videoUrl = video.videoUrl?.trim();
-      return videoUrl && !blockedVideoIds.has(video.id) && !blockedVideoUrls.has(videoUrl);
-    })
-    .sort((a, b) => a.order - b.order);
-
 const defaultSettings: SiteSettings = {
   whatsappNumber: '+37433101077',
-  videos: defaultGalleryVideos,
+  videos: [],
   heroVideoUrl: '/videos/hero-background.mp4',
-  heroVideoMobileUrl: '/videos/hero-background-mobile.mp4'
+  heroVideoMobileUrl: '/videos/hero-background.mp4'
 };
 
 interface SettingsState {
@@ -93,7 +63,7 @@ export const useSettingsStore = create<SettingsState>()(
         const currentVideos = get().settings?.videos || [];
         const newSettings = { 
           ...get().settings, 
-          videos: sanitizeVideos([...currentVideos, video])
+          videos: [...currentVideos, video].sort((a, b) => a.order - b.order)
         };
         set({ settings: newSettings });
         await get().saveToDB(newSettings);
@@ -103,7 +73,7 @@ export const useSettingsStore = create<SettingsState>()(
         const currentVideos = get().settings?.videos || [];
         const newSettings = {
           ...get().settings,
-          videos: sanitizeVideos(currentVideos.map(v => v.id === id ? { ...v, ...videoData } : v))
+          videos: currentVideos.map(v => v.id === id ? { ...v, ...videoData } : v).sort((a, b) => a.order - b.order)
         };
         set({ settings: newSettings });
         await get().saveToDB(newSettings);
@@ -113,14 +83,14 @@ export const useSettingsStore = create<SettingsState>()(
         const currentVideos = get().settings?.videos || [];
         const newSettings = {
           ...get().settings,
-          videos: sanitizeVideos(currentVideos.filter(v => v.id !== id))
+          videos: currentVideos.filter(v => v.id !== id)
         };
         set({ settings: newSettings });
         await get().saveToDB(newSettings);
       },
       
       setVideos: async (videos) => {
-        const newSettings = { ...get().settings, videos: sanitizeVideos(videos) };
+        const newSettings = { ...get().settings, videos };
         set({ settings: newSettings });
         await get().saveToDB(newSettings);
       },
@@ -129,13 +99,7 @@ export const useSettingsStore = create<SettingsState>()(
         try {
           const docSnap = await getDoc(doc(db, 'site', 'settings'));
           if (docSnap.exists()) {
-            const loadedSettings = { ...defaultSettings, ...docSnap.data() as SiteSettings };
-            set({
-              settings: {
-                ...loadedSettings,
-                videos: sanitizeVideos(loadedSettings.videos || defaultGalleryVideos),
-              },
-            });
+            set({ settings: { ...defaultSettings, ...docSnap.data() as SiteSettings } });
           }
         } catch (e) {
           console.error("Failed to load settings from DB", e);

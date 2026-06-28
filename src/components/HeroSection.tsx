@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useContentStore } from '../store/contentStore';
@@ -10,25 +10,32 @@ export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
   const { lang = 'hy' } = useParams();
   const { content } = useContentStore();
   const { settings } = useSettingsStore();
-  const desktopVideoRef = useRef<HTMLVideoElement>(null);
-  const mobileVideoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLElement>(null);
   const isInView = useInView(containerRef, { margin: "0px" });
 
   const heroContent = content[lang as 'hy' | 'ru' | 'en']?.hero || content['hy'].hero;
-  const desktopVideoSrc = settings?.heroVideoUrl || "/videos/hero-background.mp4";
-  const mobileVideoSrc = settings?.heroVideoMobileUrl || "/videos/hero-background-mobile.mp4";
+
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const videos = [desktopVideoRef.current, mobileVideoRef.current].filter(Boolean) as HTMLVideoElement[];
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
-    videos.forEach((video) => {
-      if (isInView) {
-        video.play().catch(e => console.log("Video autoplay prevented:", e));
-      } else {
-        video.pause();
-      }
-    });
+  const videoSrc = (isMobile && settings?.heroVideoMobileUrl) ? settings.heroVideoMobileUrl : (settings?.heroVideoUrl || "/videos/hero-background.mp4");
+
+  useEffect(() => {
+    if (!videoRef.current) return;
+    
+    // Play/Pause optimization based on viewport visibility
+    if (isInView) {
+      videoRef.current.play().catch(e => console.log("Video autoplay prevented:", e));
+    } else {
+      videoRef.current.pause();
+    }
   }, [isInView]);
 
   return (
@@ -37,42 +44,23 @@ export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
       className="hero relative min-h-[100dvh] w-full overflow-hidden bg-pearl flex items-center justify-center py-32"
     >
       <video
-        ref={desktopVideoRef}
-        key={desktopVideoSrc}
-        className="hero-video hidden md:block"
+        ref={videoRef}
+        key={videoSrc}
+        className="hero-video"
         autoPlay
         muted
         loop
         playsInline
-        preload="auto"
-        src={desktopVideoSrc}
-        poster="/images/hero-poster.webp"
+        preload="metadata"
+        src={videoSrc}
+        poster="/images/hero-poster.png"
         onError={(e) => {
           const target = e.target as HTMLVideoElement;
+          // Only fallback if not already the exact default to prevent infinite loop
           if (target.src && !target.src.endsWith("/videos/hero-background.mp4")) {
-            target.src = "/videos/hero-background.mp4";
-            target.load();
-            target.play().catch(console.error);
-          }
-        }}
-      />
-      <video
-        ref={mobileVideoRef}
-        key={mobileVideoSrc}
-        className="hero-video block md:hidden"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
-        src={mobileVideoSrc}
-        poster="/images/hero-poster.webp"
-        onError={(e) => {
-          const target = e.target as HTMLVideoElement;
-          if (target.src && !target.src.endsWith("/videos/hero-background-mobile.mp4")) {
-            target.src = "/videos/hero-background-mobile.mp4";
-            target.load();
-            target.play().catch(console.error);
+             target.src = "/videos/hero-background.mp4";
+             target.load();
+             target.play().catch(console.error);
           }
         }}
       />

@@ -1,6 +1,0 @@
-{
-  "firestore": {
-    "database": "ai-studio-goldensunaesthet-06980057-72a8-4947-ad91-dd805dfcbaa5",
-    "rules": "firestore.rules"
-  }
-}
