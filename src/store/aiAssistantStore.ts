@@ -115,33 +115,7 @@ export const useAIAssistantStore = create<AIAssistantState>()(
     (set, get) => ({
       settings: defaultSettings,
       knowledgeBase: [],
-      threads: [
-        {
-          id: 'mock-thread-1',
-          channel: 'instagram',
-          external_thread_id: 'ig-123',
-          customer_name: 'Anna K.',
-          customer_handle: 'anna_k_beauty',
-          language: 'ru',
-          status: 'new',
-          created_at: Date.now(),
-          updated_at: Date.now(),
-          messages: [
-            {
-              id: 'mock-msg-1',
-              thread_id: 'mock-thread-1',
-              direction: 'inbound',
-              channel: 'instagram',
-              original_text: 'Здравствуйте! Подскажите, сколько стоит Ultraformer III для лица?',
-              detected_language: 'ru',
-              ai_suggested_reply: 'Здравствуйте! Стоимость процедуры Ultraformer III для лица начинается от 150 000 драм, в зависимости от количества линий. Желаете записаться на консультацию?',
-              status: 'new',
-              requires_human: false,
-              created_at: Date.now()
-            }
-          ]
-        }
-      ],
+      threads: [],
       templates: defaultTemplates,
 
       updateSettings: (newSettings) => set((state) => ({
