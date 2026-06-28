@@ -55,9 +55,9 @@ const defaultCases: GalleryCase[] = [
     afterImage: "/images/services/skin-rejuvenation-card.png"
   }
 ];
+
 // No fabricated before/after cases are shipped by default. Real cases are
 // populated by the clinic via the admin panel and stored in Firestore.
-const defaultCases: GalleryCase[] = [];
 
 const defaultCaseById = new Map(defaultCases.map(item => [item.id, item]));
 
