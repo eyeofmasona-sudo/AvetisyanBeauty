@@ -42,14 +42,16 @@ export function InstagramCarousel() {
             </p>
           </div>
           <div className="flex gap-4 self-end md:self-auto">
-            <button 
+            <button
               onClick={() => scroll('left')}
+              aria-label={t('insta.scroll_left', 'Scroll left')}
               className="w-12 h-12 rounded-full border border-graphite/10 flex items-center justify-center text-graphite hover:bg-gold hover:text-white hover:border-gold transition-colors shrink-0"
             >
               <ChevronLeft size={20} />
             </button>
-            <button 
+            <button
               onClick={() => scroll('right')}
+              aria-label={t('insta.scroll_right', 'Scroll right')}
               className="w-12 h-12 rounded-full border border-graphite/10 flex items-center justify-center text-graphite hover:bg-gold hover:text-white hover:border-gold transition-colors shrink-0"
             >
               <ChevronRight size={20} />

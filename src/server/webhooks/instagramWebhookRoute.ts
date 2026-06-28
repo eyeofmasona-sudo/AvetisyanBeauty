@@ -1,49 +1,71 @@
 import { Router } from 'express';
+import type { Firestore } from 'firebase-admin/firestore';
+import type { GoogleGenAI } from '@google/genai';
 import { verifyMetaSignature } from './metaSignatureVerification';
+import { processIncomingMessage } from '../messaging/processIncoming';
 
-export const instagramWebhookRoute = Router();
+export function createInstagramWebhookRoute(deps: { db: Firestore; getAi: () => GoogleGenAI }) {
+  const router = Router();
 
-instagramWebhookRoute.get('/', (req, res) => {
-  const mode = req.query['hub.mode'];
-  const token = req.query['hub.verify_token'];
-  const challenge = req.query['hub.challenge'];
-  
-  if (mode === 'subscribe' && token === process.env.META_VERIFY_TOKEN) {
-    res.status(200).send(challenge);
-  } else {
-    res.sendStatus(403);
-  }
-});
+  router.get('/', (req, res) => {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
 
-instagramWebhookRoute.post('/', (req, res) => {
-  if (process.env.AI_ASSISTANT_ENABLED !== 'true') {
-    return res.status(200).send("EVENT_RECEIVED_AI_DISABLED");
-  }
-
-  const signature = req.headers['x-hub-signature-256'] as string;
-  const rawBody = (req as any).rawBody; // Assumes raw body is available
-  
-  if (rawBody && process.env.META_APP_SECRET) {
-    const isValid = verifyMetaSignature(rawBody, signature, process.env.META_APP_SECRET);
-    if (!isValid) {
-      console.warn("Invalid Meta signature on Instagram Webhook");
-      return res.sendStatus(401);
+    if (mode === 'subscribe' && token === process.env.META_VERIFY_TOKEN) {
+      res.status(200).send(challenge);
+    } else {
+      res.sendStatus(403);
     }
-  }
+  });
 
-  console.log("Instagram Webhook Received:", JSON.stringify(req.body, null, 2));
-  
-  if (req.body.object === 'instagram' && Array.isArray(req.body.entry)) {
-    req.body.entry.forEach((entry: any) => {
-      const accountId = entry.id;
-      // TODO: Map accountId to stored accounts and route appropriately
-      console.log(`Processing webhook entry for account: ${accountId}`);
-      // Here we would route the message to the AI Assistant logic for this specific account
-    });
-  } else {
-    // Legacy fallback or unknown format
-    console.log("Processing legacy or non-standard webhook format");
-  }
-  
-  res.status(200).send("EVENT_RECEIVED");
-});
+  router.post('/', (req, res) => {
+    // Always acknowledge quickly; Meta retries aggressively on non-200 responses.
+    res.status(200).send('EVENT_RECEIVED');
+
+    if (process.env.AI_ASSISTANT_ENABLED !== 'true') {
+      return;
+    }
+
+    const signature = req.headers['x-hub-signature-256'] as string;
+    const rawBody = (req as any).rawBody;
+
+    if (rawBody && process.env.META_APP_SECRET) {
+      const isValid = verifyMetaSignature(rawBody, signature, process.env.META_APP_SECRET);
+      if (!isValid) {
+        console.warn('Invalid Meta signature on Instagram Webhook');
+        return;
+      }
+    }
+
+    try {
+      if (req.body?.object !== 'instagram' || !Array.isArray(req.body?.entry)) {
+        return;
+      }
+
+      for (const entry of req.body.entry) {
+        const messagingEvents = entry?.messaging;
+        if (!Array.isArray(messagingEvents)) continue;
+
+        for (const event of messagingEvents) {
+          const text = event?.message?.text;
+          const senderId = event?.sender?.id;
+          // Echoes of our own outbound sends are also delivered here; skip them.
+          if (!text || !senderId || event?.message?.is_echo) continue;
+
+          processIncomingMessage(deps.db, deps.getAi(), {
+            channel: 'instagram',
+            external_thread_id: senderId,
+            customer_name: senderId,
+            customer_handle: senderId,
+            text,
+          }).catch((e) => console.error('Failed to process Instagram message:', e));
+        }
+      }
+    } catch (e) {
+      console.error('Error handling Instagram webhook payload:', e);
+    }
+  });
+
+  return router;
+}

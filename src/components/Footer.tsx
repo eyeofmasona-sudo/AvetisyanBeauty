@@ -29,17 +29,10 @@ export function Footer() {
             <p className="text-graphite/60 font-light max-w-sm mb-8">
               {t("footer.desc")}
             </p>
-            <div className="flex gap-4">
-              <span className="w-10 h-10 rounded-full border border-graphite/20 flex items-center justify-center text-graphite/60 hover:text-gold hover:border-gold cursor-pointer transition-colors">
-                In
-              </span>
-              <span className="w-10 h-10 rounded-full border border-graphite/20 flex items-center justify-center text-graphite/60 hover:text-gold hover:border-gold cursor-pointer transition-colors">
-                Fb
-              </span>
-              <span className="w-10 h-10 rounded-full border border-graphite/20 flex items-center justify-center text-graphite/60 hover:text-gold hover:border-gold cursor-pointer transition-colors">
-                Yt
-              </span>
-            </div>
+            {/* BLOCKER: no confirmed social media URLs exist yet for this
+                clinic; social icons are intentionally omitted rather than
+                linking to placeholder/fake profiles. Add them back once
+                real Instagram/Facebook/YouTube URLs are provided. */}
           </div>
 
           <div>
@@ -56,26 +49,6 @@ export function Footer() {
                 <Link to={`/${lang}/gallery`} className="hover:text-gold transition-colors">
                   Before & After
                 </Link>
-              </li>
-              <li>
-                <Link to={`/${lang}/admin`} className="hover:text-gold transition-colors">
-                  Admin Panel
-                </Link>
-              </li>
-              <li>
-                <a href="#" className="hover:text-gold transition-colors">
-                  SMAS Lifting
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-gold transition-colors">
-                  Body Contouring
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-gold transition-colors">
-                  Skin Rejuvenation
-                </a>
               </li>
             </ul>
           </div>
@@ -104,14 +77,8 @@ export function Footer() {
 
         <div className="pt-8 border-t border-graphite/10 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-light text-graphite/40 tracking-wider">
           <p>{t("footer.rights")}</p>
-          <div className="flex gap-8">
-            <a href="#" className="hover:text-gold transition-colors">
-              {t("footer.privacy")}
-            </a>
-            <a href="#" className="hover:text-gold transition-colors">
-              {t("footer.terms")}
-            </a>
-          </div>
+          {/* BLOCKER: no Privacy Policy / Terms of Service pages exist yet;
+              links removed rather than pointing to "#" placeholders. */}
         </div>
       </div>
     </footer>

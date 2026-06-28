@@ -121,12 +121,10 @@ export function UltraformerIII() {
                 <p className="text-graphite/70 font-light leading-relaxed mb-8">
                   {t("ultraformer.howDesc")}
                 </p>
-                <div className="aspect-video bg-graphite/5 rounded-2xl border border-graphite/5 overflow-hidden flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?q=80&w=1200&auto=format&fit=crop')" }}>
-                  <div className="w-16 h-16 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center border border-white/20 text-gold shadow-xl cursor-pointer hover:scale-110 transition-transform">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M8 5V19L19 12L8 5Z" fill="currentColor"/>
-                    </svg>
-                  </div>
+                <div className="aspect-video bg-graphite/5 rounded-2xl border border-graphite/5 overflow-hidden flex items-center justify-center">
+                  <p className="text-graphite/40 tracking-widest uppercase text-sm">
+                    {t("ultraformer.videoPlaceholder")}
+                  </p>
                 </div>
               </motion.div>
 

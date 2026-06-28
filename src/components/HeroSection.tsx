@@ -51,9 +51,9 @@ export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
         muted
         loop
         playsInline
-        preload="auto"
+        preload="metadata"
         src={videoSrc}
-        poster="/images/hero-poster.webp"
+        poster="/images/hero-poster.png"
         onError={(e) => {
           const target = e.target as HTMLVideoElement;
           // Only fallback if not already the exact default to prevent infinite loop

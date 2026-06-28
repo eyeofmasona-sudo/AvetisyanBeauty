@@ -90,7 +90,6 @@ export function GoldenSun() {
                 transition={{ duration: 1, delay: 0.2 }}
                 className="relative h-[400px] lg:h-[600px] w-full bg-pearl/30 rounded-3xl border border-graphite/5 overflow-hidden flex items-center justify-center bg-gradient-to-br from-gold/10 to-champagne-gold/5"
               >
-                 <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center opacity-60 mix-blend-overlay"></div>
                  <div className="w-48 h-48 rounded-full bg-gold/20 blur-3xl absolute animate-pulse"></div>
               </motion.div>
             </div>
@@ -114,12 +113,10 @@ export function GoldenSun() {
                 <p className="text-graphite/70 font-light leading-relaxed mb-8">
                   {t("goldensun.howDesc", "The exclusive Golden Sun treatment provides a luxurious and radiant finish...")}
                 </p>
-                <div className="aspect-video bg-graphite/5 rounded-2xl border border-graphite/5 overflow-hidden flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=1200&auto=format&fit=crop')" }}>
-                  <div className="w-16 h-16 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center border border-white/20 text-gold shadow-xl cursor-pointer hover:scale-110 transition-transform">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M8 5V19L19 12L8 5Z" fill="currentColor"/>
-                    </svg>
-                  </div>
+                <div className="aspect-video bg-graphite/5 rounded-2xl border border-graphite/5 overflow-hidden flex items-center justify-center">
+                  <p className="text-graphite/40 tracking-widest uppercase text-sm">
+                    {t("ultraformer.videoPlaceholder", "Video (coming soon)")}
+                  </p>
                 </div>
               </motion.div>
 

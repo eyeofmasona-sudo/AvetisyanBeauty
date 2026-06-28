@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Navbar } from "./components/Navbar";
@@ -11,11 +11,15 @@ import { InstagramCarousel } from "./components/InstagramCarousel";
 import { VideoCarousel } from "./components/VideoCarousel";
 import { Footer } from "./components/Footer";
 import { BookingModal } from "./components/BookingModal";
-import { UltraformerIII } from "./pages/UltraformerIII";
-import { GoldenSun } from "./pages/GoldenSun";
-import { Gallery } from "./pages/Gallery";
-import { AdminPanel } from "./pages/AdminPanel";
 import { AnalyticsProvider, CookieBanner } from "./components/AnalyticsProvider";
+
+// Lazy-loaded: these routes pull in heavy dependencies (three.js/3D
+// rendering on UltraformerIII, the admin dashboard) that shouldn't be in
+// the homepage's initial bundle.
+const UltraformerIII = lazy(() => import("./pages/UltraformerIII").then(m => ({ default: m.UltraformerIII })));
+const GoldenSun = lazy(() => import("./pages/GoldenSun").then(m => ({ default: m.GoldenSun })));
+const Gallery = lazy(() => import("./pages/Gallery").then(m => ({ default: m.Gallery })));
+const AdminPanel = lazy(() => import("./pages/AdminPanel").then(m => ({ default: m.AdminPanel })));
 import { HelmetProvider } from 'react-helmet-async';
 import { SEO } from "./components/SEO";
 import { WhatsAppButton } from "./components/WhatsAppButton";
@@ -94,22 +98,30 @@ export default function App() {
           } />
           <Route path="/:lang/ultraformer" element={
             <LanguageWrapper>
-              <UltraformerIII />
+              <Suspense fallback={null}>
+                <UltraformerIII />
+              </Suspense>
             </LanguageWrapper>
           } />
           <Route path="/:lang/golden-sun" element={
             <LanguageWrapper>
-              <GoldenSun />
+              <Suspense fallback={null}>
+                <GoldenSun />
+              </Suspense>
             </LanguageWrapper>
           } />
           <Route path="/:lang/gallery" element={
             <LanguageWrapper>
-              <Gallery />
+              <Suspense fallback={null}>
+                <Gallery />
+              </Suspense>
             </LanguageWrapper>
           } />
           <Route path="/:lang/admin" element={
             <LanguageWrapper>
-              <AdminPanel />
+              <Suspense fallback={null}>
+                <AdminPanel />
+              </Suspense>
             </LanguageWrapper>
           } />
           <Route path="*" element={<Navigate to="/hy" replace />} />

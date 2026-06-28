@@ -37,9 +37,9 @@ export function ResultsSection() {
         </div>
 
         <div className="relative group">
-          <BeforeAfterSlider 
-            beforeImage={firstCase?.beforeImage || "https://images.unsplash.com/photo-1515377905703-c4788e51af15?q=80&w=1200&auto=format&fit=crop"}
-            afterImage={firstCase?.afterImage || "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?q=80&w=1200&auto=format&fit=crop"}
+          <BeforeAfterSlider
+            beforeImage={firstCase?.beforeImage}
+            afterImage={firstCase?.afterImage}
           />
 
           <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-white/90 via-white/50 to-transparent flex flex-col md:flex-row justify-between items-start md:items-end gap-4 pointer-events-none rounded-b-3xl">

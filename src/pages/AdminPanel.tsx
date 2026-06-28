@@ -9,7 +9,7 @@ import { SEO } from "../components/SEO";
 import { 
   Trash2, Edit2, Plus, X, 
   LayoutDashboard, Sparkles, Image as ImageIcon, 
-  Users, Star, FileText, CalendarHeart, 
+  Users, Star, FileText,
   TrendingUp, BarChart3, Settings, BrainCircuit,
   Instagram, CheckCircle, Loader2, LogOut, Video
 } from "lucide-react";
@@ -102,7 +102,6 @@ export function AdminPanel() {
     category: "face"
   });
 
-  const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
   const [isConnectingInstagram, setIsConnectingInstagram] = useState(false);
   const [tempInstaHandle, setTempInstaHandle] = useState('');
   const [isConnectingSecondInstagram, setIsConnectingSecondInstagram] = useState(false);
@@ -317,7 +316,7 @@ export function AdminPanel() {
   if (!isAuthenticated) {
     return (
       <div className="bg-pearl min-h-screen text-graphite flex flex-col items-center justify-center p-6 selection:bg-gold/30 selection:text-graphite">
-        <SEO titleKey="seo.admin.title" descriptionKey="seo.admin.description" />
+        <SEO titleKey="seo.admin.title" descriptionKey="seo.admin.description" noindex />
         <div className="bg-white w-full max-w-md rounded-[2rem] p-10 shadow-lg border border-graphite/5 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gold/40 via-gold to-gold/40"></div>
           <div className="text-center mb-8">
@@ -340,7 +339,7 @@ export function AdminPanel() {
 
   return (
     <div className="bg-pearl min-h-screen text-graphite selection:bg-gold/30 selection:text-graphite">
-      <SEO titleKey="seo.admin.title" descriptionKey="seo.admin.description" />
+      <SEO titleKey="seo.admin.title" descriptionKey="seo.admin.description" noindex />
       <Navbar onBookClick={() => {}} />
 
       <main className="pt-32 pb-24">
@@ -384,42 +383,9 @@ export function AdminPanel() {
                   </h1>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
-                  <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-graphite/5 flex flex-col justify-between">
-                    <div className="w-12 h-12 rounded-full bg-pearl flex items-center justify-center mb-4">
-                      <CalendarHeart size={24} className="text-gold" />
-                    </div>
-                    <p className="text-sm font-medium text-graphite/60 uppercase tracking-widest">{t("admin.stats.totalBookings")}</p>
-                    <p className="font-display text-4xl text-graphite mt-2">142</p>
-                  </div>
-                </div>
-
                 <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-graphite/5 mt-8">
                   <h3 className="font-display text-2xl text-graphite mb-6">{t("admin.recentBookings")}</h3>
-                  <div className="space-y-4">
-                    {[
-                      { name: "Anna S.", service: "Ultraformer III", date: "Today, 14:00", status: "pending" },
-                      { name: "Maria K.", service: "SMAS Lifting", date: "Tomorrow, 10:30", status: "confirmed" },
-                      { name: "Elena R.", service: "Skin Rejuvenation", date: "May 24, 16:00", status: "completed" }
-                    ].map((booking, i) => (
-                      <div key={i} className="flex flex-col sm:flex-row justify-between items-center p-4 border border-graphite/10 rounded-2xl hover:border-gold/30 transition-colors">
-                        <div>
-                          <p className="font-medium text-graphite">{booking.name}</p>
-                          <p className="text-sm text-graphite/60">{booking.service}</p>
-                        </div>
-                        <div className="flex items-center gap-4 mt-4 sm:mt-0">
-                          <p className="text-sm text-graphite">{booking.date}</p>
-                          <span className={`px-3 py-1 rounded-full text-xs tracking-widest uppercase ${
-                            booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 
-                            booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : 
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {t(`admin.status.${booking.status}`)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-graphite/40 text-center py-12">{t("admin.noBookings")}</p>
                 </div>
               </div>
             )}
@@ -1355,8 +1321,12 @@ export function AdminPanel() {
                     <div key={s.id} className="bg-white rounded-[2rem] p-6 shadow-sm border border-graphite/5 transition-all">
                       {!editingSpecialistId || editingSpecialistId !== s.id ? (
                         <div className="flex flex-col md:flex-row items-center gap-6">
-                          <div className="w-24 h-24 rounded-full bg-pearl overflow-hidden border-2 border-transparent">
-                            <img src={s.image || `https://i.pravatar.cc/150?u=${s.id}`} alt={s.name} className="w-full h-full object-cover" />
+                          <div className="w-24 h-24 rounded-full bg-pearl overflow-hidden border-2 border-transparent flex items-center justify-center">
+                            {s.image ? (
+                              <img src={s.image} alt={s.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Users size={32} className="text-graphite/20" />
+                            )}
                           </div>
                           <div className="flex-1 text-center md:text-left">
                             <h4 className="font-medium text-lg text-graphite">{s.name}</h4>
@@ -1771,89 +1741,6 @@ export function AdminPanel() {
               >
                 Cancel
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Floating Action Button for AI */}
-      <button
-        onClick={() => setIsAiDrawerOpen(true)}
-        className="fixed bottom-24 right-8 z-40 bg-gold text-white p-4 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center group"
-      >
-        <BrainCircuit size={24} />
-        <span className="absolute right-full mr-4 bg-white text-graphite px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-          {t("admin.aiAssistant")}
-        </span>
-      </button>
-
-      {/* AI Marketing Assistant Drawer */}
-      {isAiDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-graphite/20 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="p-6 border-b border-graphite/5 flex justify-between items-center bg-pearl">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center">
-                  <BrainCircuit size={20} className="text-gold" />
-                </div>
-                <div>
-                  <h3 className="font-display text-xl text-graphite">{t("admin.aiTitle")}</h3>
-                  <p className="text-xs text-graphite/60 uppercase tracking-widest mt-1">Copilot</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsAiDrawerOpen(false)} 
-                className="text-graphite/40 hover:text-graphite p-2 rounded-full hover:bg-white transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white">
-              <div className="space-y-4">
-                <p className="text-sm text-graphite/60">
-                  {t("admin.aiDesc")}
-                </p>
-                <div className="grid grid-cols-1 gap-2">
-                  {[
-                    t("admin.aiActions.insta"),
-                    t("admin.aiActions.seo"),
-                    t("admin.aiActions.translate"),
-                    t("admin.aiActions.offer")
-                  ].map((action, i) => (
-                    <button key={i} className="text-left px-4 py-3 bg-pearl hover:bg-gold/10 hover:text-gold text-graphite text-sm rounded-xl transition-colors border border-transparent hover:border-gold/20">
-                      {action}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="p-4 bg-ivory rounded-2xl border border-graphite/5">
-                <h4 className="text-xs font-medium text-graphite/60 uppercase tracking-widest mb-2">{t("admin.capabilities")}</h4>
-                <ul className="text-sm text-graphite space-y-2">
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-gold"></div> {t("admin.ideation")}
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-gold"></div> {t("admin.seoOpt")}
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-gold"></div> {t("admin.translation")}
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="p-6 bg-white border-t border-graphite/5">
-              <div className="relative">
-                <textarea 
-                  placeholder={t("admin.typeRequest")}
-                  className="w-full bg-pearl border-none rounded-2xl pl-4 pr-12 py-3 min-h-[80px] text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 resize-none"
-                ></textarea>
-                <button className="absolute bottom-3 right-3 p-2 bg-graphite text-white rounded-full hover:bg-gold transition-colors">
-                  <Sparkles size={16} />
-                </button>
-              </div>
             </div>
           </div>
         </div>

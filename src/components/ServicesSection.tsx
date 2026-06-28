@@ -48,7 +48,15 @@ export function ServicesSection() {
                   navigate(service.href);
                 }
               }}
-              className="group relative bg-white border border-graphite/5 rounded-3xl overflow-hidden shadow-sm hover:scale-[1.02] hover:-translate-y-1 hover:shadow-2xl hover:shadow-graphite/10 transition-all duration-500 cursor-pointer flex flex-col h-full"
+              role={service.href ? "button" : undefined}
+              tabIndex={service.href ? 0 : undefined}
+              onKeyDown={(e) => {
+                if (service.href && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  navigate(service.href);
+                }
+              }}
+              className={`group relative bg-white border border-graphite/5 rounded-3xl overflow-hidden shadow-sm hover:scale-[1.02] hover:-translate-y-1 hover:shadow-2xl hover:shadow-graphite/10 transition-all duration-500 flex flex-col h-full ${service.href ? "cursor-pointer" : ""}`}
             >
               {service.image_url ? (
                 <div className="relative h-56 w-full overflow-hidden">
