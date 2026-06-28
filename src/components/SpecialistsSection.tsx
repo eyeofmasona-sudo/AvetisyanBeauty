@@ -37,7 +37,7 @@ export function SpecialistsSection() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {specialists.map((spec, i) => (
             <motion.div
-              key={spec.name}
+              key={spec.id}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
