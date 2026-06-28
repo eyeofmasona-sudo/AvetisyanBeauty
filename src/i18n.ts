@@ -191,6 +191,7 @@ const resources = {
             "role": "",
             "exp": "",
             "spec": ""
+          },
           "elena": {
             "name": "Անուն Ազգանուն",
             "role": "Գլխավոր մասնագետ",

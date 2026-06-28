@@ -154,11 +154,6 @@ export const defaultContent: LocalizedContent = {
         { id: "smas", title: "SMAS Լիֆթինգ", description: "Ճշգրիտ ուլտրաձայնային ալիքներ, որոնք թիրախավորում են հյուսվածքների խորը շերտերը հիմնարար կառուցվածքային բարձրացման համար:", tag: "Հակատարիքային", image_url: serviceImageById.smas },
         { id: "body-contouring", title: "Մարմնի Կոնտուրավորում", description: "Նպատակային ճարպի նվազեցում և մաշկի ձգում՝ օգտագործելով համակցված ՌՖ և ուլտրաձայնային ալիքներ:", tag: "Քանդակում", image_url: serviceImageById["body-contouring"] },
         { id: "skin-rejuvenation", title: "Մաշկի Երիտասարդացում", description: "Բջջային մակարդակում թարմացման արձանագրություններ՝ անթերի հյուսվածքի և երանգի համար:", tag: "Էսթետիկ", image_url: serviceImageById["skin-rejuvenation"] }
-        { id: "ultraformer", title: "Ultraformer III", description: "Առաջադեմ MMFU տեխնոլոգիա դեմքի լիֆթինգի, մաշկի ձգման և մարմնի կոնտուրավորման համար:", tag: "Ֆլագմանային", href: "/hy/ultraformer" },
-        { id: "goldensun", title: "Golden Sun", description: "Բացառիկ Golden Sun պրոցեդուրան ապահովում է շքեղ և շողացող արդյունք:", tag: "Առաջնային", href: "/hy/golden-sun" },
-        { id: "smas", title: "SMAS Լիֆթինգ", description: "Ճշգրիտ ուլտրաձայնային ալիքներ, որոնք թիրախավորում են հյուսվածքների խորը շերտերը հիմնարար կառուցվածքային բարձրացման համար:", tag: "Հակատարիքային" },
-        { id: "body-contouring", title: "Մարմնի Կոնտուրավորում", description: "Նպատակային ճարպի նվազեցում և մաշկի ձգում՝ օգտագործելով համակցված ՌՖ և ուլտրաձայնային ալիքներ:", tag: "Քանդակում" },
-        { id: "skin-rejuvenation", title: "Մաշկի Երիտասարդացում", description: "Բջջային մակարդակում թարմացման արձանագրություններ՝ անթերի հյուսվածքի և երանգի համար:", tag: "Էսթետիկ" }
       ]
     },
     specialists: {

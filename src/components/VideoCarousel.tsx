@@ -1,5 +1,3 @@
-import React from 'react';
-import { defaultGalleryVideos, useSettingsStore } from '../store/settingsStore';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clapperboard, ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react';
