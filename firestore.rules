@@ -1,6 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Default deny for any collection not explicitly handled below.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
     function isSignedIn() {
       return request.auth != null;
     }
@@ -104,9 +109,11 @@ service cloud.firestore {
     }
 
     // Instagram Accounts (encrypted tokens)
+    // Not used by the current server (tokens are stored server-side in
+    // instagram_accounts.json), so this collection is admin-only and
+    // otherwise denied by the default-deny rule above.
     match /instagram_accounts/{docId} {
-      // Tokens are encrypted using server APP_SECRET, safe to allow read/write for now
-      allow read, write: if true;
+      allow read, write: if isAdmin();
     }
 
     // Admins

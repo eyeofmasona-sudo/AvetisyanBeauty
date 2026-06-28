@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  BLOCKER: <loc> values use the placeholder domain "https://example.com"
+  (matching SITE_URL in .env.example) because no real production domain has
+  been configured yet. Replace every occurrence of https://example.com with
+  the real SITE_URL before deploying, or regenerate this file from SITE_URL.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://example.com/hy</loc>
+    <xhtml:link rel="alternate" hreflang="hy" href="https://example.com/hy" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://example.com/ru" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://example.com/en" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://example.com/hy" />
+  </url>
+  <url>
+    <loc>https://example.com/hy/ultraformer</loc>
+    <xhtml:link rel="alternate" hreflang="hy" href="https://example.com/hy/ultraformer" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://example.com/ru/ultraformer" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://example.com/en/ultraformer" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://example.com/hy/ultraformer" />
+  </url>
+  <url>
+    <loc>https://example.com/hy/golden-sun</loc>
+    <xhtml:link rel="alternate" hreflang="hy" href="https://example.com/hy/golden-sun" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://example.com/ru/golden-sun" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://example.com/en/golden-sun" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://example.com/hy/golden-sun" />
+  </url>
+  <url>
+    <loc>https://example.com/hy/gallery</loc>
+    <xhtml:link rel="alternate" hreflang="hy" href="https://example.com/hy/gallery" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://example.com/ru/gallery" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://example.com/en/gallery" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://example.com/hy/gallery" />
+  </url>
+  <url>
+    <loc>https://example.com/ru</loc>
+  </url>
+  <url>
+    <loc>https://example.com/ru/ultraformer</loc>
+  </url>
+  <url>
+    <loc>https://example.com/ru/golden-sun</loc>
+  </url>
+  <url>
+    <loc>https://example.com/ru/gallery</loc>
+  </url>
+  <url>
+    <loc>https://example.com/en</loc>
+  </url>
+  <url>
+    <loc>https://example.com/en/ultraformer</loc>
+  </url>
+  <url>
+    <loc>https://example.com/en/golden-sun</loc>
+  </url>
+  <url>
+    <loc>https://example.com/en/gallery</loc>
+  </url>
+</urlset>

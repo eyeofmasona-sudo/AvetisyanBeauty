@@ -317,7 +317,7 @@ export function AdminPanel() {
   if (!isAuthenticated) {
     return (
       <div className="bg-pearl min-h-screen text-graphite flex flex-col items-center justify-center p-6 selection:bg-gold/30 selection:text-graphite">
-        <SEO titleKey="seo.admin.title" descriptionKey="seo.admin.description" />
+        <SEO titleKey="seo.admin.title" descriptionKey="seo.admin.description" noindex />
         <div className="bg-white w-full max-w-md rounded-[2rem] p-10 shadow-lg border border-graphite/5 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gold/40 via-gold to-gold/40"></div>
           <div className="text-center mb-8">
@@ -340,7 +340,7 @@ export function AdminPanel() {
 
   return (
     <div className="bg-pearl min-h-screen text-graphite selection:bg-gold/30 selection:text-graphite">
-      <SEO titleKey="seo.admin.title" descriptionKey="seo.admin.description" />
+      <SEO titleKey="seo.admin.title" descriptionKey="seo.admin.description" noindex />
       <Navbar onBookClick={() => {}} />
 
       <main className="pt-32 pb-24">

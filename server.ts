@@ -3,6 +3,8 @@ import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 import multer from "multer";
+import helmet from "helmet";
+import { rateLimit } from "express-rate-limit";
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
@@ -52,9 +54,66 @@ import { whatsappWebhookRoute } from "./src/server/webhooks/whatsappWebhookRoute
 
 dotenv.config();
 
+const isProduction = process.env.NODE_ENV === "production";
+
+if (!process.env.JWT_SECRET) {
+  if (isProduction) {
+    console.error("FATAL: JWT_SECRET environment variable is required in production.");
+    process.exit(1);
+  }
+  console.warn("WARNING: JWT_SECRET is not set. Using a random secret for this dev session only (admin sessions will not persist across restarts).");
+}
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString("hex");
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://www.googletagmanager.com", "https://connect.facebook.net"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https:"],
+        mediaSrc: ["'self'", "data:", "blob:", "https:"],
+        connectSrc: ["'self'", "https:"],
+        frameSrc: ["'self'", "https:"],
+        objectSrc: ["'none'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  }));
+
+  const authRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many attempts. Please try again later." },
+  });
+
+  const apiRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests. Please try again later." },
+  });
+
+  function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const token = req.cookies?.admin_token;
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    try {
+      jwt.verify(token, JWT_SECRET);
+      next();
+    } catch (e) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+  }
 
   // Setup Encryption
   const APP_SECRET = process.env.APP_SECRET || '';
@@ -180,13 +239,12 @@ async function startServer() {
   };
 
   // --- Admin Auth Endpoints ---
-  app.post("/api/auth/login-firebase", async (req, res) => {
+  app.post("/api/auth/login-firebase", authRateLimit, async (req, res) => {
     try {
       const { idToken } = req.body;
       const decodedToken = await getAuth(firebaseAdminApp).verifyIdToken(idToken);
       if (decodedToken.email === 'eyeofmasona@gmail.com' && decodedToken.email_verified) {
-        const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_only_for_dev';
-        const token = jwt.sign({ username: decodedToken.email }, jwtSecret, { expiresIn: '12h' });
+        const token = jwt.sign({ username: decodedToken.email }, JWT_SECRET, { expiresIn: '12h' });
         res.cookie('admin_token', token, { httpOnly: true, secure: true, sameSite: 'none', maxAge: 12 * 60 * 60 * 1000 });
         res.json({ success: true });
       } else {
@@ -198,11 +256,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/auth/login", (req, res) => {
+  app.post("/api/auth/login", authRateLimit, (req, res) => {
     const { username, password } = req.body;
     const adminUser = process.env.ADMIN_USERNAME;
     const adminPass = process.env.ADMIN_PASSWORD;
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_only_for_dev';
 
     if (!adminUser || !adminPass) {
       res.status(500).json({ error: "Admin credentials not configured on server" });
@@ -210,7 +267,7 @@ async function startServer() {
     }
 
     if (username === adminUser && password === adminPass) {
-      const token = jwt.sign({ username }, jwtSecret, { expiresIn: '12h' });
+      const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '12h' });
       res.cookie('admin_token', token, { httpOnly: true, secure: true, sameSite: 'none', maxAge: 12 * 60 * 60 * 1000 });
       res.json({ success: true });
     } else {
@@ -230,14 +287,18 @@ async function startServer() {
       return;
     }
 
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_only_for_dev';
     try {
-      jwt.verify(token, jwtSecret);
+      jwt.verify(token, JWT_SECRET);
       res.json({ authenticated: true });
     } catch (e) {
       res.json({ authenticated: false });
     }
   });
+
+  // All Gemini/AI endpoints are admin-only: they consume paid API credits
+  // and are not meant to be called directly by site visitors.
+  app.use("/api/gemini", apiRateLimit, requireAdmin);
+  app.use("/api/ai-messaging", apiRateLimit, requireAdmin);
 
   // 1. Text / Content Generation (for magic mode and ads)
   app.post("/api/gemini/generate", async (req, res) => {
@@ -494,8 +555,9 @@ async function startServer() {
   });
 
   // 8. Instagram Basic Display API Integration
-
-  app.post("/api/instagram/token", async (req, res) => {
+  // Token management is admin-only; /api/instagram/posts stays public since it
+  // only returns already-public media (no tokens) and feeds the homepage carousel.
+  app.post("/api/instagram/token", apiRateLimit, requireAdmin, async (req, res) => {
     const { token, accountIndex = 0, handle = '' } = req.body;
     if (!token) {
       return res.status(400).json({ error: "Token is required" });
@@ -506,7 +568,7 @@ async function startServer() {
     res.json({ success: true, message: "Token stored securely" });
   });
 
-  app.post("/api/instagram/token/remove", async (req, res) => {
+  app.post("/api/instagram/token/remove", apiRateLimit, requireAdmin, async (req, res) => {
     const { accountIndex } = req.body;
     if (accountIndex !== undefined && accountIndex >= 0 && accountIndex < instagramTokens.length) {
        instagramTokens[accountIndex] = ''; // Or use splice, but keeping array size might be easier if we rely on indices 0 and 1
@@ -516,7 +578,7 @@ async function startServer() {
     res.json({ success: true, message: "Token removed" });
   });
 
-  app.get("/api/instagram/status", (req, res) => {
+  app.get("/api/instagram/status", requireAdmin, (req, res) => {
     const status = [0, 1].map(index => {
       return {
         accountIndex: index,
@@ -640,16 +702,8 @@ async function startServer() {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
-  app.post("/api/db/site/:docId", async (req, res) => {
+  app.post("/api/db/site/:docId", apiRateLimit, requireAdmin, async (req, res) => {
     try {
-      const token = req.cookies?.admin_token;
-      console.log("DB update request received. Token exists:", !!token);
-      if (!token) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-      const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_only_for_dev';
-      jwt.verify(token, jwtSecret);
-
       const { docId } = req.params;
       const data = req.body;
       await db.collection('site').doc(docId).set(data, { merge: true });
@@ -660,56 +714,57 @@ async function startServer() {
     }
   });
 
+  // Allowlist of MIME types -> extensions accepted for uploads. Anything else
+  // (executables, scripts, HTML, SVG, etc.) is rejected before being written to disk.
+  const ALLOWED_UPLOAD_TYPES: Record<string, string> = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+    "video/mp4": ".mp4",
+    "video/webm": ".webm",
+    "video/quicktime": ".mov",
+  };
+
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
       cb(null, uploadsDir);
     },
     filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname);
+      const ext = ALLOWED_UPLOAD_TYPES[file.mimetype] || path.extname(file.originalname);
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       cb(null, file.fieldname + '-' + uniqueSuffix + ext);
     }
   });
 
-  const upload = multer({ 
+  const upload = multer({
     storage,
-    limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit for videos
+    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit (videos are the largest expected upload)
+    fileFilter: (req, file, cb) => {
+      if (!ALLOWED_UPLOAD_TYPES[file.mimetype]) {
+        return cb(new Error("Unsupported file type"));
+      }
+      cb(null, true);
+    },
   });
 
   // Expose public folder statically (for uploads)
   app.use('/uploads', express.static(uploadsDir));
 
-  app.post("/api/upload", upload.single('file'), async (req, res) => {
-    try {
-      const token = req.cookies?.admin_token;
-      if (!token) {
-        return res.status(401).json({ error: "Unauthorized" });
+  app.post("/api/upload", apiRateLimit, requireAdmin, (req, res) => {
+    upload.single('file')(req, res, (err: any) => {
+      if (err) {
+        return res.status(400).json({ error: err.message || "Upload rejected" });
       }
-      
-      const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_only_for_dev';
-      jwt.verify(token, jwtSecret);
-
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
-
-      // Return the public URL for the uploaded file
       res.json({ url: `/uploads/${req.file.filename}` });
-    } catch (e) {
-      console.error("Upload error", e);
-      res.status(500).json({ error: "Upload failed" });
-    }
+    });
   });
 
-  app.delete("/api/upload", async (req, res) => {
+  app.delete("/api/upload", apiRateLimit, requireAdmin, async (req, res) => {
     try {
-      const token = req.cookies?.admin_token;
-      if (!token) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-      const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_only_for_dev';
-      jwt.verify(token, jwtSecret);
-
       const { url } = req.body;
       if (!url) return res.status(400).json({ error: "No URL provided" });
 
@@ -720,7 +775,7 @@ async function startServer() {
            await bucket.file(`uploads/${filename}`).delete().catch(console.error);
          }
       } else {
-        const fileName = url.split('/').pop();
+        const fileName = path.basename(url.split('/').pop() || '');
         if (fileName) {
           const filePath = path.join(uploadsDir, fileName);
           if (fs.existsSync(filePath)) {

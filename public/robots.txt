@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /*/admin
+Allow: /
+
+# BLOCKER: replace with the real SITE_URL once configured (see .env.example)
+Sitemap: https://example.com/sitemap.xml

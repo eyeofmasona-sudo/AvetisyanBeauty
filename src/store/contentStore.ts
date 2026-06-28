@@ -71,9 +71,9 @@ export const defaultContent: LocalizedContent = {
       title: "Համաշխարհային մակարդակի փորձառություն",
       description: "Մեր խորհրդի կողմից հաստատված մաշկաբանների և էսթետիկ բժշկության մասնագետների թիմը նվիրված է բացառիկ արդյունքների ապահովմանը ճշգրտությամբ և հոգատարությամբ:",
       items: [
-        { id: "elena", name: "Բժ. Ելենա Ռոստովա", role: "Գլխավոր բժշկական տնօրեն", exp: "15+ Տարի", spec: "Հակատարիքային և SMAS Արձանագրություններ", image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=800&auto=format&fit=crop" },
-        { id: "marcus", name: "Բժ. Մարկուս Չեն", role: "Առաջատար էսթետիկ վիրաբույժ", exp: "12+ Տարի", spec: "Մարմնի կոնտուրավորման փորձագետ", image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=800&auto=format&fit=crop" },
-        { id: "sarah", name: "Բժ. Սառա Ալ-Ֆայեդ", role: "Ավագ մաշկաբան", exp: "10+ Տարի", spec: "Մաշկի առաջադեմ երիտասարդացում", image: "https://images.unsplash.com/photo-1594824436951-7f12bc58ec53?q=80&w=800&auto=format&fit=crop" }
+        { id: "specialist-1", name: "Գլխավոր բժշկական տնօրեն", role: "", exp: "", spec: "Հակատարիքային և SMAS Արձանագրություններ" },
+        { id: "specialist-2", name: "Առաջատար էսթետիկ վիրաբույժ", role: "", exp: "", spec: "Մարմնի կոնտուրավորման փորձագետ" },
+        { id: "specialist-3", name: "Ավագ մաշկաբան", role: "", exp: "", spec: "Մաշկի առաջադեմ երիտասարդացում" }
       ]
     },
     results: {
@@ -110,9 +110,9 @@ export const defaultContent: LocalizedContent = {
       title: "Экспертиза мирового уровня",
       description: "Наша команда сертифицированных дерматологов и специалистов эстетической медицины стремится обеспечивать исключительные результаты с точностью и заботой.",
       items: [
-        { id: "elena", name: "Д-р Елена Ростова", role: "Главный медицинский директор", exp: "15+ Лет", spec: "Протоколы Anti-Aging и SMAS", image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=800&auto=format&fit=crop" },
-        { id: "marcus", name: "Д-р Маркус Чен", role: "Ведущий эстетический хирург", exp: "12+ Лет", spec: "Эксперт по контурированию тела", image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=800&auto=format&fit=crop" },
-        { id: "sarah", name: "Д-р Сара Аль-Файед", role: "Старший дерматолог", exp: "10+ Лет", spec: "Передовое омоложение кожи", image: "https://images.unsplash.com/photo-1594824436951-7f12bc58ec53?q=80&w=800&auto=format&fit=crop" }
+        { id: "specialist-1", name: "Главный медицинский директор", role: "", exp: "", spec: "Протоколы Anti-Aging и SMAS" },
+        { id: "specialist-2", name: "Ведущий эстетический хирург", role: "", exp: "", spec: "Эксперт по контурированию тела" },
+        { id: "specialist-3", name: "Старший дерматолог", role: "", exp: "", spec: "Передовое омоложение кожи" }
       ]
     },
     results: {
@@ -149,9 +149,9 @@ export const defaultContent: LocalizedContent = {
       title: "World-Class Expertise",
       description: "Our team of board-certified dermatologists and aesthetic medicine specialists are dedicated to delivering exceptional results with precision and care.",
       items: [
-        { id: "elena", name: "Dr. Elena Rostova", role: "Chief Medical Director", exp: "15+ Years", spec: "Anti-Aging & SMAS Protocols", image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=800&auto=format&fit=crop" },
-        { id: "marcus", name: "Dr. Marcus Chen", role: "Lead Aesthetic Surgeon", exp: "12+ Years", spec: "Body Contouring Expert", image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=800&auto=format&fit=crop" },
-        { id: "sarah", name: "Dr. Sarah Al-Fayed", role: "Senior Dermatologist", exp: "10+ Years", spec: "Advanced Skin Rejuvenation", image: "https://images.unsplash.com/photo-1594824436951-7f12bc58ec53?q=80&w=800&auto=format&fit=crop" }
+        { id: "specialist-1", name: "Chief Medical Director", role: "", exp: "", spec: "Anti-Aging & SMAS Protocols" },
+        { id: "specialist-2", name: "Lead Aesthetic Surgeon", role: "", exp: "", spec: "Body Contouring Expert" },
+        { id: "specialist-3", name: "Senior Dermatologist", role: "", exp: "", spec: "Advanced Skin Rejuvenation" }
       ]
     },
     results: {

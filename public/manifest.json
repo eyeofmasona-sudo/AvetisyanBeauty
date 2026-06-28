@@ -1,0 +1,20 @@
+{
+  "name": "Avetisyan Beauty Clinic",
+  "short_name": "Avetisyan",
+  "start_url": "/hy",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#C89B4E",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
