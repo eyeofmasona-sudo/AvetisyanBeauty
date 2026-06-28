@@ -49,6 +49,95 @@ export type LocalizedContent = {
   [key in 'hy' | 'ru' | 'en']: SiteContent;
 };
 
+const realSpecialists: SpecialistItem[] = [
+  {
+    id: "lika-petrosyan",
+    name: "Լիկա Պետրոսյան",
+    role: "",
+    exp: "",
+    spec: "",
+    image: "/images/specialists/lilit-hovhannisyan.png",
+  },
+  {
+    id: "maria-avetisyan",
+    name: "Մարիա Ավետիսյան",
+    role: "",
+    exp: "",
+    spec: "",
+    image: "/images/specialists/maria-avetisyan.jpg",
+  },
+  {
+    id: "lilit-hovhannisyan",
+    name: "Լիլիթ Հովհանիսյան",
+    role: "",
+    exp: "",
+    spec: "",
+    image: "/images/specialists/lika-petrosyan.jpg",
+  },
+];
+
+const serviceImageById: Record<string, string> = {
+  ultraformer: "/images/services/ultraformer-hero.png",
+  smas: "/images/services/wrinkle-reduction-card.png",
+  goldensun: "/images/services/golden-sun-before-after.png",
+  "body-contouring": "/images/services/body-contouring-card.png",
+  "skin-rejuvenation": "/images/services/skin-rejuvenation-card.png",
+};
+
+const normalizeServiceItems = (items: ServiceItem[]) =>
+  items.map((item) => {
+    const fallbackImage = serviceImageById[item.id];
+
+    if (!fallbackImage) {
+      return item;
+    }
+
+    return {
+      ...item,
+      image_url: fallbackImage,
+    };
+  });
+
+const normalizeSpecialists = (content: LocalizedContent): LocalizedContent => {
+  const demoIds = new Set(["elena", "marcus", "sarah"]);
+  const specialistIds = new Set(realSpecialists.map(item => item.id));
+
+  const normalizeLang = (lang: keyof LocalizedContent) => {
+    const section = content[lang].specialists;
+    const hasDemoSpecialists = section.items.some(item => demoIds.has(item.id));
+    const hasRealSpecialists = section.items.some(item => specialistIds.has(item.id));
+    const normalizedServices = normalizeServiceItems(content[lang].services.items);
+
+    if (!hasDemoSpecialists && !hasRealSpecialists) {
+      return {
+        ...content[lang],
+        services: {
+          ...content[lang].services,
+          items: normalizedServices,
+        },
+      };
+    }
+
+    return {
+      ...content[lang],
+      services: {
+        ...content[lang].services,
+        items: normalizedServices,
+      },
+      specialists: {
+        ...section,
+        items: realSpecialists,
+      },
+    };
+  };
+
+  return {
+    hy: normalizeLang("hy"),
+    ru: normalizeLang("ru"),
+    en: normalizeLang("en"),
+  };
+};
+
 export const defaultContent: LocalizedContent = {
   hy: {
     hero: {
@@ -60,21 +149,17 @@ export const defaultContent: LocalizedContent = {
       title: "Ժամանակակից լուծումներ Ձեր գեղեցկության և ինքնավստահության համար",
       description: "Մենք ընտրում ենք անվտանգ և արդյունավետ մեթոդներ, որոնք օգնում են խնամել մաշկը, բարելավել դեմքի ու մարմնի տեսքը և պահպանել բնական արդյունքը։",
       items: [
-        { id: "ultraformer", title: "Ultraformer III", description: "Ժամանակակից սարքային մեթոդ՝ դեմքի մաշկի ձգման, օվալի բարելավման և մարմնի որոշ հատվածների խնամքի համար։", tag: "Առանց վիրահատության", href: "/hy/ultraformer" },
-        { id: "goldensun", title: "Golden Sun", description: "Golden Sun ծառայությունը նախատեսված է մաշկին խնամված, թարմ և գեղեցիկ երանգ հաղորդելու համար։", tag: "Հատուկ ծառայություն", href: "/hy/golden-sun" },
-        { id: "smas", title: "SMAS լիֆթինգ", description: "Ուլտրաձայնային ալիքների միջոցով իրականացվող մաշկի ձգում, որը օգնում է դեմքին տալ ավելի թարմ և խնամված տեսք։", tag: "Երիտասարդացում" },
-        { id: "body-contouring", title: "Մարմնի կոնտուրավորում", description: "Մարմնի որոշ հատվածների տեսքի բարելավում, մաշկի ձգում և ձևերի ավելի հստակ ընդգծում՝ անհատական մոտեցմամբ։", tag: "Մարմնի խնամք" },
-        { id: "skin-rejuvenation", title: "Մաշկի երիտասարդացում", description: "Խնամքի մեթոդներ, որոնք օգնում են թարմացնել մաշկի տեսքը, բարելավել երանգը և դարձնել այն ավելի հարթ ու առողջ տեսք ունեցող։", tag: "Մաշկի խնամք" }
+        { id: "ultraformer", title: "Ultraformer III", description: "Ժամանակակից սարքային մեթոդ՝ դեմքի մաշկի ձգման, օվալի բարելավման և մարմնի որոշ հատվածների խնամքի համար։", tag: "Առանց վիրահատության", href: "/hy/ultraformer", image_url: serviceImageById.ultraformer },
+        { id: "goldensun", title: "Golden Sun", description: "Golden Sun ծառայությունը նախատեսված է մաշկին խնամված, թարմ և գեղեցիկ երանգ հաղորդելու համար։", tag: "Հատուկ ծառայություն", href: "/hy/golden-sun", image_url: serviceImageById.goldensun },
+        { id: "smas", title: "SMAS լիֆթինգ", description: "Ուլտրաձայնային ալիքների միջոցով իրականացվող մաշկի ձգում, որը օգնում է դեմքին տալ ավելի թարմ և խնամված տեսք։", tag: "Երիտասարդացում", image_url: serviceImageById.smas },
+        { id: "body-contouring", title: "Մարմնի կոնտուրավորում", description: "Մարմնի որոշ հատվածների տեսքի բարելավում, մաշկի ձգում և ձևերի ավելի հստակ ընդգծում՝ անհատական մոտեցմամբ։", tag: "Մարմնի խնամք", image_url: serviceImageById["body-contouring"] },
+        { id: "skin-rejuvenation", title: "Մաշկի երիտասարդացում", description: "Խնամքի մեթոդներ, որոնք օգնում են թարմացնել մաշկի տեսքը, բարելավել երանգը և դարձնել այն ավելի հարթ ու առողջ տեսք ունեցող։", tag: "Մաշկի խնամք", image_url: serviceImageById["skin-rejuvenation"] }
       ]
     },
     specialists: {
       title: "Վստահելի մասնագետներ՝ անհատական մոտեցմամբ",
       description: "Մեր թիմը կարևորում է անվտանգությունը, ուշադիր մոտեցումը և բնական արդյունքը։ Յուրաքանչյուր այցելու ստանում է անհատական խորհրդատվություն և իրեն համապատասխան խնամքի պլան։",
-      items: [
-        { id: "specialist-1", name: "Անուն Ազգանուն", role: "Գլխավոր մասնագետ", exp: "", spec: "Դեմքի խնամք և երիտասարդացում" },
-        { id: "specialist-2", name: "Անուն Ազգանուն", role: "Էսթետիկ կոսմետոլոգ", exp: "", spec: "Մարմնի խնամք և սարքային մեթոդներ" },
-        { id: "specialist-3", name: "Անուն Ազգանուն", role: "Մաշկի խնամքի մասնագետ", exp: "", spec: "Մաշկի որակ, երանգ և խնամք" }
-      ]
+      items: realSpecialists
     },
     results: {
       title: "Բնական և նկատելի փոփոխություն",
@@ -99,21 +184,17 @@ export const defaultContent: LocalizedContent = {
       title: "Создавая будущее красоты",
       description: "Наши тщательно отобранные технологии, одобренные FDA, и специализированные протоколы разработаны для оптимальных, естественных результатов.",
       items: [
-        { id: "ultraformer", title: "Ultraformer III", description: "Передовая технология MMFU для лифтинга лица, подтяжки кожи и контурирования тела.", tag: "Флагманская", href: "/ru/ultraformer" },
-        { id: "goldensun", title: "Golden Sun", description: "Эксклюзивная процедура Golden Sun обеспечивает роскошный и сияющий результат.", tag: "Приоритетная", href: "/ru/golden-sun" },
-        { id: "smas", title: "SMAS Лифтинг", description: "Прецизионный ультразвук, нацеленный на глубокие слои тканей для фундаментального структурного лифтинга.", tag: "Антивозрастной" },
-        { id: "body-contouring", title: "Контурирование тела", description: "Целенаправленное уменьшение жировых отложений и подтяжка кожи с использованием комбинированного RF и ультразвука.", tag: "Скульптурирование" },
-        { id: "skin-rejuvenation", title: "Омоложение кожи", description: "Протоколы обновления на клеточном уровне для безупречной текстуры и тона.", tag: "Эстетика" }
+        { id: "ultraformer", title: "Ultraformer III", description: "Передовая технология MMFU для лифтинга лица, подтяжки кожи и контурирования тела.", tag: "Флагманская", href: "/ru/ultraformer", image_url: serviceImageById.ultraformer },
+        { id: "goldensun", title: "Golden Sun", description: "Эксклюзивная процедура Golden Sun обеспечивает роскошный и сияющий результат.", tag: "Приоритетная", href: "/ru/golden-sun", image_url: serviceImageById.goldensun },
+        { id: "smas", title: "SMAS Лифтинг", description: "Прецизионный ультразвук, нацеленный на глубокие слои тканей для фундаментального структурного лифтинга.", tag: "Антивозрастной", image_url: serviceImageById.smas },
+        { id: "body-contouring", title: "Контурирование тела", description: "Целенаправленное уменьшение жировых отложений и подтяжка кожи с использованием комбинированного RF и ультразвука.", tag: "Скульптурирование", image_url: serviceImageById["body-contouring"] },
+        { id: "skin-rejuvenation", title: "Омоложение кожи", description: "Протоколы обновления на клеточном уровне для безупречной текстуры и тона.", tag: "Эстетика", image_url: serviceImageById["skin-rejuvenation"] }
       ]
     },
     specialists: {
       title: "Экспертиза мирового уровня",
       description: "Наша команда сертифицированных дерматологов и специалистов эстетической медицины стремится обеспечивать исключительные результаты с точностью и заботой.",
-      items: [
-        { id: "specialist-1", name: "Главный медицинский директор", role: "", exp: "", spec: "Протоколы Anti-Aging и SMAS" },
-        { id: "specialist-2", name: "Ведущий эстетический хирург", role: "", exp: "", spec: "Эксперт по контурированию тела" },
-        { id: "specialist-3", name: "Старший дерматолог", role: "", exp: "", spec: "Передовое омоложение кожи" }
-      ]
+      items: realSpecialists
     },
     results: {
       title: "Видимая трансформация",
@@ -138,21 +219,17 @@ export const defaultContent: LocalizedContent = {
       title: "Building the Future of Beauty",
       description: "Our carefully selected FDA-approved technologies and specialized protocols designed for optimal, natural-looking results.",
       items: [
-        { id: "ultraformer", title: "Ultraformer III", description: "Advanced MMFU technology for face lifting, skin tightening, and body contouring.", tag: "Flagship", href: "/en/ultraformer" },
-        { id: "goldensun", title: "Golden Sun", description: "The exclusive Golden Sun treatment provides a luxurious and radiant finish.", tag: "Featured", href: "/en/golden-sun" },
-        { id: "smas", title: "SMAS Lifting", description: "Precision ultrasound targeting deep tissue layers for foundational structural lift.", tag: "Anti-Aging" },
-        { id: "body-contouring", title: "Body Contouring", description: "Targeted fat reduction and skin tightening utilizing combined RF and ultrasound.", tag: "Sculpting" },
-        { id: "skin-rejuvenation", title: "Skin Rejuvenation", description: "Cellular level renewal protocols for flawless texture and tone.", tag: "Aesthetic" }
+        { id: "ultraformer", title: "Ultraformer III", description: "Advanced MMFU technology for face lifting, skin tightening, and body contouring.", tag: "Flagship", href: "/en/ultraformer", image_url: serviceImageById.ultraformer },
+        { id: "goldensun", title: "Golden Sun", description: "The exclusive Golden Sun treatment provides a luxurious and radiant finish.", tag: "Featured", href: "/en/golden-sun", image_url: serviceImageById.goldensun },
+        { id: "smas", title: "SMAS Lifting", description: "Precision ultrasound targeting deep tissue layers for foundational structural lift.", tag: "Anti-Aging", image_url: serviceImageById.smas },
+        { id: "body-contouring", title: "Body Contouring", description: "Targeted fat reduction and skin tightening utilizing combined RF and ultrasound.", tag: "Sculpting", image_url: serviceImageById["body-contouring"] },
+        { id: "skin-rejuvenation", title: "Skin Rejuvenation", description: "Cellular level renewal protocols for flawless texture and tone.", tag: "Aesthetic", image_url: serviceImageById["skin-rejuvenation"] }
       ]
     },
     specialists: {
       title: "World-Class Expertise",
       description: "Our team of board-certified dermatologists and aesthetic medicine specialists are dedicated to delivering exceptional results with precision and care.",
-      items: [
-        { id: "specialist-1", name: "Chief Medical Director", role: "", exp: "", spec: "Anti-Aging & SMAS Protocols" },
-        { id: "specialist-2", name: "Lead Aesthetic Surgeon", role: "", exp: "", spec: "Body Contouring Expert" },
-        { id: "specialist-3", name: "Senior Dermatologist", role: "", exp: "", spec: "Advanced Skin Rejuvenation" }
-      ]
+      items: realSpecialists
     },
     results: {
       title: "Visible Transformation",
@@ -203,7 +280,7 @@ export const loadContentFromDB = async () => {
   try {
     const docSnap = await getDoc(doc(db, 'site', 'content'));
     if (docSnap.exists()) {
-      useContentStore.setState({ content: docSnap.data() as LocalizedContent });
+      useContentStore.setState({ content: normalizeSpecialists(docSnap.data() as LocalizedContent) });
     }
   } catch (e) {
     console.error("Failed to load content from DB", e);
