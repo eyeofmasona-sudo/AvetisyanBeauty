@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useId } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Calendar, Clock, ChevronRight, ChevronLeft, Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAnalytics } from "./AnalyticsProvider";
+import { useSettingsStore } from "../store/settingsStore";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -10,11 +11,19 @@ interface BookingModalProps {
 }
 
 export function BookingModal({ isOpen, onClose }: BookingModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { settings } = useSettingsStore();
   const [step, setStep] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
-  const [selectedDate, setSelectedDate] = useState<number | null>(null);
+  const [monthOffset, setMonthOffset] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const { trackBookingInitiation, trackEvent } = useAnalytics();
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen && step === 1) {
@@ -22,10 +31,55 @@ export function BookingModal({ isOpen, onClose }: BookingModalProps) {
     }
   }, [isOpen, step, trackEvent]);
 
-  // Calendar logic
-  const daysInMonth = 31;
-  const startDay = 3; // Let's say Wednesday is the 1st
-  const monthName = "October 2024";
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    dialogRef.current?.focus();
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  const today = new Date();
+  const viewDate = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+  const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+  const firstWeekday = viewDate.getDay(); // 0 = Sunday
+  const startDay = (firstWeekday + 6) % 7; // Monday-first offset
+  const monthName = viewDate.toLocaleDateString(i18n.language, { month: "long", year: "numeric" });
+
+  const resetAndClose = () => {
+    onClose();
+    setStep(1);
+    setSelectedDate(null);
+    setSelectedTime(null);
+    setName("");
+    setEmail("");
+    setPhone("");
+  };
+
+  const handleConfirm = () => {
+    trackEvent('Booking Confirmed', { category: selectedCategory });
+
+    const dateLabel = selectedDate
+      ? selectedDate.toLocaleDateString(i18n.language, { day: "numeric", month: "long", year: "numeric" })
+      : "";
+    const lines = [
+      t("booking.whatsappIntro", "New booking request:"),
+      `${t("booking.serviceTitle", "Service")}: ${selectedCategory || ""}`,
+      `${t("booking.dateTimeTitle")}: ${dateLabel} ${selectedTime || ""}`,
+      `${t("booking.namePlace")}: ${name}`,
+      `${t("booking.phonePlace")}: ${phone}`,
+    ];
+    if (email) lines.push(`${t("booking.emailPlace")}: ${email}`);
+
+    const cleanNumber = settings?.whatsappNumber?.replace(/[^\d+]/g, '') || '+37433101077';
+    const finalNumber = cleanNumber.startsWith('+') ? cleanNumber.substring(1) : cleanNumber;
+    const waUrl = `https://wa.me/${finalNumber}?text=${encodeURIComponent(lines.join("\n"))}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+
+    resetAndClose();
+  };
 
   return (
     <AnimatePresence>
@@ -39,6 +93,11 @@ export function BookingModal({ isOpen, onClose }: BookingModalProps) {
             onClick={onClose}
           />
           <motion.div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            tabIndex={-1}
             initial={{ opacity: 0, y: 50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
@@ -47,7 +106,7 @@ export function BookingModal({ isOpen, onClose }: BookingModalProps) {
           >
             <div className="flex justify-between items-center p-6 md:p-8 border-b border-graphite/5 bg-pearl/50">
               <div>
-                <h3 className="font-display text-2xl text-graphite">
+                <h3 id={titleId} className="font-display text-2xl text-graphite">
                   {t("booking.title")}
                 </h3>
                 <p className="text-graphite/40 text-sm mt-1">
@@ -56,6 +115,7 @@ export function BookingModal({ isOpen, onClose }: BookingModalProps) {
               </div>
               <button
                 onClick={onClose}
+                aria-label={t("booking.closeBtn", "Close")}
                 className="w-10 h-10 rounded-full bg-graphite/5 flex items-center justify-center text-graphite/60 hover:text-graphite hover:bg-graphite/10 transition-colors"
               >
                 <X size={20} />
@@ -116,21 +176,22 @@ export function BookingModal({ isOpen, onClose }: BookingModalProps) {
                         t("booking.cats.inject"),
                         t("booking.cats.skin"),
                       ].map((cat) => (
-                        <div
+                        <button
                           key={cat}
+                          type="button"
                           onClick={() => {
                             setSelectedCategory(cat);
                             trackBookingInitiation(cat);
                             setStep(2);
                           }}
-                          className="group p-4 rounded-xl border border-graphite/10 bg-pearl hover:bg-white hover:border-gold hover:shadow-sm cursor-pointer transition-all flex justify-between items-center"
+                          className="w-full group p-4 rounded-xl border border-graphite/10 bg-pearl hover:bg-white hover:border-gold hover:shadow-sm transition-all flex justify-between items-center text-left"
                         >
                           <span className="text-graphite font-medium text-sm">{cat}</span>
                           <ChevronRight
                             size={16}
                             className="text-graphite/30 group-hover:text-gold"
                           />
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -145,9 +206,24 @@ export function BookingModal({ isOpen, onClose }: BookingModalProps) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="bg-pearl rounded-2xl border border-graphite/10 p-6">
                       <div className="flex justify-between items-center mb-6">
-                        <button className="p-2 hover:bg-graphite/5 rounded-full transition-colors text-graphite/60"><ChevronLeft size={20}/></button>
-                        <span className="font-medium text-graphite">{monthName}</span>
-                        <button className="p-2 hover:bg-graphite/5 rounded-full transition-colors text-graphite/60"><ChevronRight size={20}/></button>
+                        <button
+                          type="button"
+                          onClick={() => setMonthOffset((m) => Math.max(0, m - 1))}
+                          disabled={monthOffset === 0}
+                          aria-label={t("booking.prevMonth", "Previous month")}
+                          className="p-2 hover:bg-graphite/5 rounded-full transition-colors text-graphite/60 disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <ChevronLeft size={20}/>
+                        </button>
+                        <span className="font-medium text-graphite capitalize">{monthName}</span>
+                        <button
+                          type="button"
+                          onClick={() => setMonthOffset((m) => m + 1)}
+                          aria-label={t("booking.nextMonth", "Next month")}
+                          className="p-2 hover:bg-graphite/5 rounded-full transition-colors text-graphite/60"
+                        >
+                          <ChevronRight size={20}/>
+                        </button>
                       </div>
                       <div className="grid grid-cols-7 gap-2 mb-4">
                         {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(day => (
@@ -160,18 +236,25 @@ export function BookingModal({ isOpen, onClose }: BookingModalProps) {
                         ))}
                         {Array.from({ length: daysInMonth }).map((_, i) => {
                           const dayNum = i + 1;
-                          const isSelected = selectedDate === dayNum;
-                          const isPast = dayNum < 15; // Just a mock condition
+                          const cellDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), dayNum);
+                          const isSelected = selectedDate?.getTime() === cellDate.getTime();
+                          const isPast = cellDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
                           return (
-                            <button 
-                              key={i} 
-                              onClick={() => !isPast && setSelectedDate(dayNum)}
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => {
+                                if (isPast) return;
+                                setSelectedDate(cellDate);
+                                setSelectedTime(null);
+                              }}
                               disabled={isPast}
+                              aria-pressed={isSelected}
                               className={`aspect-square flex items-center justify-center rounded-full text-sm transition-colors ${
-                                isSelected 
-                                  ? 'bg-gold text-white shadow-md' 
-                                  : isPast 
-                                    ? 'text-graphite/20 cursor-not-allowed' 
+                                isSelected
+                                  ? 'bg-gold text-white shadow-md'
+                                  : isPast
+                                    ? 'text-graphite/20 cursor-not-allowed'
                                     : 'text-graphite hover:bg-gold/10 hover:text-gold'
                               }`}
                             >
@@ -181,24 +264,28 @@ export function BookingModal({ isOpen, onClose }: BookingModalProps) {
                         })}
                       </div>
                     </div>
-                    
+
                     <div className="space-y-4">
                       <p className="text-graphite/60 text-sm uppercase tracking-widest flex items-center gap-2">
                         <Clock size={16} />
                         {t("booking.availableTimes")}
                       </p>
-                      
+
                       {selectedDate ? (
                         <div className="grid grid-cols-2 gap-3">
                           {["10:00", "11:30", "14:00", "16:15", "17:30", "18:45"].map(
                             (time) => (
-                              <div
+                              <button
                                 key={time}
-                                onClick={() => setStep(3)}
-                                className="p-3 rounded-xl border border-graphite/10 bg-pearl hover:bg-gold hover:text-white hover:border-gold hover:shadow-md cursor-pointer transition-all text-graphite text-center font-medium text-sm"
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTime(time);
+                                  setStep(3);
+                                }}
+                                className="p-3 rounded-xl border border-graphite/10 bg-pearl hover:bg-gold hover:text-white hover:border-gold hover:shadow-md transition-all text-graphite text-center font-medium text-sm"
                               >
                                 {time}
-                              </div>
+                              </button>
                             ),
                           )}
                         </div>
@@ -218,41 +305,61 @@ export function BookingModal({ isOpen, onClose }: BookingModalProps) {
                   <h4 className="text-graphite text-lg font-medium mb-4">
                     {t("booking.detailsTitle")}
                   </h4>
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      placeholder={t("booking.namePlace")}
-                      className="w-full bg-pearl border border-graphite/10 rounded-xl px-6 py-4 text-graphite placeholder:text-graphite/40 focus:outline-none focus:border-gold focus:bg-white transition-colors shadow-inner"
-                    />
-                    <input
-                      type="email"
-                      placeholder={t("booking.emailPlace")}
-                      className="w-full bg-pearl border border-graphite/10 rounded-xl px-6 py-4 text-graphite placeholder:text-graphite/40 focus:outline-none focus:border-gold focus:bg-white transition-colors shadow-inner"
-                    />
-                    <input
-                      type="tel"
-                      placeholder={t("booking.phonePlace")}
-                      className="w-full bg-pearl border border-graphite/10 rounded-xl px-6 py-4 text-graphite placeholder:text-graphite/40 focus:outline-none focus:border-gold focus:bg-white transition-colors shadow-inner"
-                    />
-                    
+                  <form
+                    className="space-y-4"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleConfirm();
+                    }}
+                  >
+                    <div>
+                      <label htmlFor={`${titleId}-name`} className="sr-only">{t("booking.namePlace")}</label>
+                      <input
+                        id={`${titleId}-name`}
+                        type="text"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder={t("booking.namePlace")}
+                        className="w-full bg-pearl border border-graphite/10 rounded-xl px-6 py-4 text-graphite placeholder:text-graphite/40 focus:outline-none focus:border-gold focus:bg-white transition-colors shadow-inner"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`${titleId}-email`} className="sr-only">{t("booking.emailPlace")}</label>
+                      <input
+                        id={`${titleId}-email`}
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder={t("booking.emailPlace")}
+                        className="w-full bg-pearl border border-graphite/10 rounded-xl px-6 py-4 text-graphite placeholder:text-graphite/40 focus:outline-none focus:border-gold focus:bg-white transition-colors shadow-inner"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`${titleId}-phone`} className="sr-only">{t("booking.phonePlace")}</label>
+                      <input
+                        id={`${titleId}-phone`}
+                        type="tel"
+                        required
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder={t("booking.phonePlace")}
+                        className="w-full bg-pearl border border-graphite/10 rounded-xl px-6 py-4 text-graphite placeholder:text-graphite/40 focus:outline-none focus:border-gold focus:bg-white transition-colors shadow-inner"
+                      />
+                    </div>
+
                     <div className="p-4 bg-gold/5 border border-gold/20 rounded-xl flex justify-between items-center text-sm">
                       <span className="text-graphite/60">Selected Service:</span>
                       <span className="font-medium text-graphite">{selectedCategory}</span>
                     </div>
 
                     <button
-                      onClick={() => {
-                        trackEvent('Booking Confirmed', { category: selectedCategory });
-                        alert(t("booking.success"));
-                        onClose();
-                        setStep(1);
-                        setSelectedDate(null);
-                      }}
+                      type="submit"
                       className="w-full mt-4 bg-graphite text-white font-medium rounded-xl px-6 py-4 hover:bg-gold transition-colors shadow-md"
                     >
                       {t("booking.confirmBtn")}
                     </button>
-                  </div>
+                  </form>
                 </div>
               )}
             </div>
@@ -273,4 +380,3 @@ export function BookingModal({ isOpen, onClose }: BookingModalProps) {
     </AnimatePresence>
   );
 }
-

@@ -154,12 +154,22 @@ export const defaultContent: LocalizedContent = {
         { id: "smas", title: "SMAS Լիֆթինգ", description: "Ճշգրիտ ուլտրաձայնային ալիքներ, որոնք թիրախավորում են հյուսվածքների խորը շերտերը հիմնարար կառուցվածքային բարձրացման համար:", tag: "Հակատարիքային", image_url: serviceImageById.smas },
         { id: "body-contouring", title: "Մարմնի Կոնտուրավորում", description: "Նպատակային ճարպի նվազեցում և մաշկի ձգում՝ օգտագործելով համակցված ՌՖ և ուլտրաձայնային ալիքներ:", tag: "Քանդակում", image_url: serviceImageById["body-contouring"] },
         { id: "skin-rejuvenation", title: "Մաշկի Երիտասարդացում", description: "Բջջային մակարդակում թարմացման արձանագրություններ՝ անթերի հյուսվածքի և երանգի համար:", tag: "Էսթետիկ", image_url: serviceImageById["skin-rejuvenation"] }
+        { id: "ultraformer", title: "Ultraformer III", description: "Առաջադեմ MMFU տեխնոլոգիա դեմքի լիֆթինգի, մաշկի ձգման և մարմնի կոնտուրավորման համար:", tag: "Ֆլագմանային", href: "/hy/ultraformer" },
+        { id: "goldensun", title: "Golden Sun", description: "Բացառիկ Golden Sun պրոցեդուրան ապահովում է շքեղ և շողացող արդյունք:", tag: "Առաջնային", href: "/hy/golden-sun" },
+        { id: "smas", title: "SMAS Լիֆթինգ", description: "Ճշգրիտ ուլտրաձայնային ալիքներ, որոնք թիրախավորում են հյուսվածքների խորը շերտերը հիմնարար կառուցվածքային բարձրացման համար:", tag: "Հակատարիքային" },
+        { id: "body-contouring", title: "Մարմնի Կոնտուրավորում", description: "Նպատակային ճարպի նվազեցում և մաշկի ձգում՝ օգտագործելով համակցված ՌՖ և ուլտրաձայնային ալիքներ:", tag: "Քանդակում" },
+        { id: "skin-rejuvenation", title: "Մաշկի Երիտասարդացում", description: "Բջջային մակարդակում թարմացման արձանագրություններ՝ անթերի հյուսվածքի և երանգի համար:", tag: "Էսթետիկ" }
       ]
     },
     specialists: {
       title: "Համաշխարհային մակարդակի փորձառություն",
       description: "Մեր խորհրդի կողմից հաստատված մաշկաբանների և էսթետիկ բժշկության մասնագետների թիմը նվիրված է բացառիկ արդյունքների ապահովմանը ճշգրտությամբ և հոգատարությամբ:",
       items: realSpecialists
+      items: [
+        { id: "specialist-1", name: "Գլխավոր բժշկական տնօրեն", role: "", exp: "", spec: "Հակատարիքային և SMAS Արձանագրություններ" },
+        { id: "specialist-2", name: "Առաջատար էսթետիկ վիրաբույժ", role: "", exp: "", spec: "Մարմնի կոնտուրավորման փորձագետ" },
+        { id: "specialist-3", name: "Ավագ մաշկաբան", role: "", exp: "", spec: "Մաշկի առաջադեմ երիտասարդացում" }
+      ]
     },
     results: {
       title: "Տեսանելի Փոխակերպում",
@@ -189,12 +199,22 @@ export const defaultContent: LocalizedContent = {
         { id: "smas", title: "SMAS Лифтинг", description: "Прецизионный ультразвук, нацеленный на глубокие слои тканей для фундаментального структурного лифтинга.", tag: "Антивозрастной", image_url: serviceImageById.smas },
         { id: "body-contouring", title: "Контурирование тела", description: "Целенаправленное уменьшение жировых отложений и подтяжка кожи с использованием комбинированного RF и ультразвука.", tag: "Скульптурирование", image_url: serviceImageById["body-contouring"] },
         { id: "skin-rejuvenation", title: "Омоложение кожи", description: "Протоколы обновления на клеточном уровне для безупречной текстуры и тона.", tag: "Эстетика", image_url: serviceImageById["skin-rejuvenation"] }
+        { id: "ultraformer", title: "Ultraformer III", description: "Передовая технология MMFU для лифтинга лица, подтяжки кожи и контурирования тела.", tag: "Флагманская", href: "/ru/ultraformer" },
+        { id: "goldensun", title: "Golden Sun", description: "Эксклюзивная процедура Golden Sun обеспечивает роскошный и сияющий результат.", tag: "Приоритетная", href: "/ru/golden-sun" },
+        { id: "smas", title: "SMAS Лифтинг", description: "Прецизионный ультразвук, нацеленный на глубокие слои тканей для фундаментального структурного лифтинга.", tag: "Антивозрастной" },
+        { id: "body-contouring", title: "Контурирование тела", description: "Целенаправленное уменьшение жировых отложений и подтяжка кожи с использованием комбинированного RF и ультразвука.", tag: "Скульптурирование" },
+        { id: "skin-rejuvenation", title: "Омоложение кожи", description: "Протоколы обновления на клеточном уровне для безупречной текстуры и тона.", tag: "Эстетика" }
       ]
     },
     specialists: {
       title: "Экспертиза мирового уровня",
       description: "Наша команда сертифицированных дерматологов и специалистов эстетической медицины стремится обеспечивать исключительные результаты с точностью и заботой.",
       items: realSpecialists
+      items: [
+        { id: "specialist-1", name: "Главный медицинский директор", role: "", exp: "", spec: "Протоколы Anti-Aging и SMAS" },
+        { id: "specialist-2", name: "Ведущий эстетический хирург", role: "", exp: "", spec: "Эксперт по контурированию тела" },
+        { id: "specialist-3", name: "Старший дерматолог", role: "", exp: "", spec: "Передовое омоложение кожи" }
+      ]
     },
     results: {
       title: "Видимая трансформация",
@@ -224,12 +244,22 @@ export const defaultContent: LocalizedContent = {
         { id: "smas", title: "SMAS Lifting", description: "Precision ultrasound targeting deep tissue layers for foundational structural lift.", tag: "Anti-Aging", image_url: serviceImageById.smas },
         { id: "body-contouring", title: "Body Contouring", description: "Targeted fat reduction and skin tightening utilizing combined RF and ultrasound.", tag: "Sculpting", image_url: serviceImageById["body-contouring"] },
         { id: "skin-rejuvenation", title: "Skin Rejuvenation", description: "Cellular level renewal protocols for flawless texture and tone.", tag: "Aesthetic", image_url: serviceImageById["skin-rejuvenation"] }
+        { id: "ultraformer", title: "Ultraformer III", description: "Advanced MMFU technology for face lifting, skin tightening, and body contouring.", tag: "Flagship", href: "/en/ultraformer" },
+        { id: "goldensun", title: "Golden Sun", description: "The exclusive Golden Sun treatment provides a luxurious and radiant finish.", tag: "Featured", href: "/en/golden-sun" },
+        { id: "smas", title: "SMAS Lifting", description: "Precision ultrasound targeting deep tissue layers for foundational structural lift.", tag: "Anti-Aging" },
+        { id: "body-contouring", title: "Body Contouring", description: "Targeted fat reduction and skin tightening utilizing combined RF and ultrasound.", tag: "Sculpting" },
+        { id: "skin-rejuvenation", title: "Skin Rejuvenation", description: "Cellular level renewal protocols for flawless texture and tone.", tag: "Aesthetic" }
       ]
     },
     specialists: {
       title: "World-Class Expertise",
       description: "Our team of board-certified dermatologists and aesthetic medicine specialists are dedicated to delivering exceptional results with precision and care.",
       items: realSpecialists
+      items: [
+        { id: "specialist-1", name: "Chief Medical Director", role: "", exp: "", spec: "Anti-Aging & SMAS Protocols" },
+        { id: "specialist-2", name: "Lead Aesthetic Surgeon", role: "", exp: "", spec: "Body Contouring Expert" },
+        { id: "specialist-3", name: "Senior Dermatologist", role: "", exp: "", spec: "Advanced Skin Rejuvenation" }
+      ]
     },
     results: {
       title: "Visible Transformation",
@@ -255,14 +285,9 @@ export interface InstagramPost {
   caption?: string;
 }
 
-const defaultInstaPosts: InstagramPost[] = [
-  { id: 1, image: 'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?q=80&w=500&auto=format&fit=crop', link: '#', likes: 124, comments: 12 },
-  { id: 2, image: 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?q=80&w=500&auto=format&fit=crop', link: '#', likes: 89, comments: 5 },
-  { id: 3, image: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=500&auto=format&fit=crop', link: '#', likes: 256, comments: 34 },
-  { id: 4, image: 'https://images.unsplash.com/photo-1552693673-1bf958298935?q=80&w=500&auto=format&fit=crop', link: '#', likes: 412, comments: 42 },
-  { id: 5, image: 'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?q=80&w=500&auto=format&fit=crop', link: '#', likes: 178, comments: 18 },
-  { id: 6, image: 'https://images.unsplash.com/photo-1533423996375-f91444985df2?q=80&w=500&auto=format&fit=crop', link: '#', likes: 315, comments: 27 }
-];
+// No fabricated posts are shipped by default. Real posts are populated by
+// the clinic via the admin panel's Instagram integration.
+const defaultInstaPosts: InstagramPost[] = [];
 
 interface ContentState {
   content: LocalizedContent;

@@ -3,9 +3,25 @@ import { Bot, CheckCircle, MessageSquare, AlertCircle, Clock, User, Send, Edit2,
 import { useAIAssistantStore, AIThread, AIMessage } from '../../../store/aiAssistantStore';
 
 export function Inbox() {
-  const { threads, approveMessage, updateMessageStatus } = useAIAssistantStore();
+  const { threads, sendReply, updateMessageStatus } = useAIAssistantStore();
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(threads.length > 0 ? threads[0].id : null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'needs_human' | 'answered'>('all');
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [sendErrors, setSendErrors] = useState<Record<string, string>>({});
+  const [editStates, setEditStates] = useState<Record<string, string>>({});
+
+  const handleSend = async (threadId: string, messageId: string, finalReply: string) => {
+    setSendingId(messageId);
+    setSendErrors((prev) => ({ ...prev, [messageId]: '' }));
+    try {
+      await sendReply(threadId, messageId, finalReply);
+      setEditStates((prev) => ({ ...prev, [messageId]: '' }));
+    } catch (e: any) {
+      setSendErrors((prev) => ({ ...prev, [messageId]: e.message || 'Failed to send reply' }));
+    } finally {
+      setSendingId(null);
+    }
+  };
 
   const filteredThreads = threads.filter(t => statusFilter === 'all' || t.status === statusFilter);
   const selectedThread = threads.find(t => t.id === selectedThreadId);
@@ -25,8 +41,6 @@ export function Inbox() {
       default: return 'bg-graphite/10 text-graphite';
     }
   };
-
-  const [editStates, setEditStates] = useState<Record<string, string>>({});
 
   return (
     <div className="flex flex-col h-[calc(100vh-12rem)]">
@@ -178,22 +192,27 @@ export function Inbox() {
                             placeholder="Edit the AI's suggested reply..."
                           />
                           
+                          {sendErrors[msg.id] && (
+                            <div className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                              {sendErrors[msg.id]}
+                            </div>
+                          )}
                           <div className="flex justify-between items-center">
-                            <button 
+                            <button
                               onClick={() => updateMessageStatus(selectedThread.id, msg.id, 'needs_human', true)}
                               className="px-4 py-2 text-xs font-medium text-orange-600 hover:bg-orange-50 rounded-xl transition-colors border border-orange-200 flex items-center gap-2"
                             >
                               <AlertCircle size={14} /> Request Human Review
                             </button>
-                            <button 
+                            <button
                               onClick={() => {
-                                const finalReply = editStates[msg.id] ?? msg.ai_suggested_reply;
-                                approveMessage(selectedThread.id, msg.id, finalReply);
-                                setEditStates({ ...editStates, [msg.id]: '' });
+                                const finalReply = editStates[msg.id] ?? msg.ai_suggested_reply ?? '';
+                                handleSend(selectedThread.id, msg.id, finalReply);
                               }}
-                              className="px-6 py-2 text-sm font-medium bg-gold text-white hover:bg-gold/90 rounded-xl transition-colors shadow-sm flex items-center gap-2"
+                              disabled={sendingId === msg.id}
+                              className="px-6 py-2 text-sm font-medium bg-gold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors shadow-sm flex items-center gap-2"
                             >
-                              <Send size={14} /> Approve & Send
+                              <Send size={14} /> {sendingId === msg.id ? 'Sending...' : 'Approve & Send'}
                             </button>
                           </div>
                         </div>
@@ -235,18 +254,22 @@ export function Inbox() {
                               value={editStates[msg.id] || ''}
                               onChange={(e) => setEditStates({ ...editStates, [msg.id]: e.target.value })}
                             />
+                            {sendErrors[msg.id] && (
+                              <div className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                                {sendErrors[msg.id]}
+                              </div>
+                            )}
                             <div className="flex justify-end">
-                              <button 
+                              <button
                                 onClick={() => {
                                   const finalReply = editStates[msg.id];
                                   if (!finalReply) return;
-                                  approveMessage(selectedThread.id, msg.id, finalReply);
-                                  setEditStates({ ...editStates, [msg.id]: '' });
+                                  handleSend(selectedThread.id, msg.id, finalReply);
                                 }}
-                                disabled={!editStates[msg.id]}
+                                disabled={!editStates[msg.id] || sendingId === msg.id}
                                 className="px-6 py-2 text-sm font-medium bg-graphite text-white hover:bg-graphite/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors shadow-sm flex items-center gap-2"
                               >
-                                <Send size={14} /> Send Manual Reply
+                                <Send size={14} /> {sendingId === msg.id ? 'Sending...' : 'Send Manual Reply'}
                               </button>
                             </div>
                         </div>

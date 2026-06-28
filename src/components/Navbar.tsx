@@ -107,7 +107,10 @@ export function Navbar({ onBookClick }: { onBookClick?: () => void }) {
             )}
           </div>
           
-          <button className="text-sm font-medium tracking-wide px-6 py-2.5 text-graphite border border-graphite/20 hover:border-graphite/50 hover:bg-graphite/5 rounded-full transition-all duration-300">
+          <button
+            onClick={onBookClick}
+            className="text-sm font-medium tracking-wide px-6 py-2.5 text-graphite border border-graphite/20 hover:border-graphite/50 hover:bg-graphite/5 rounded-full transition-all duration-300"
+          >
             {t("nav.consultation")}
           </button>
           <button
@@ -161,7 +164,13 @@ export function Navbar({ onBookClick }: { onBookClick?: () => void }) {
               ))}
           </div>
           <div className="flex flex-col gap-4 mt-2">
-            <button className="w-full py-3 text-graphite border border-graphite/20 rounded-full font-medium">
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onBookClick?.();
+              }}
+              className="w-full py-3 text-graphite border border-graphite/20 rounded-full font-medium"
+            >
               {t("nav.consultation")}
             </button>
             <button 

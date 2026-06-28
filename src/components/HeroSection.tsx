@@ -47,6 +47,9 @@ export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
         preload="auto"
         src={desktopVideoSrc}
         poster="/images/hero-poster.webp"
+        preload="metadata"
+        src={videoSrc}
+        poster="/images/hero-poster.png"
         onError={(e) => {
           const target = e.target as HTMLVideoElement;
           if (target.src && !target.src.endsWith("/videos/hero-background.mp4")) {

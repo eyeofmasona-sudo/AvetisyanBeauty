@@ -121,6 +121,10 @@ export function GoldenSun() {
                       <path d="M8 5V19L19 12L8 5Z" fill="currentColor"/>
                     </svg>
                   </div>
+                <div className="aspect-video bg-graphite/5 rounded-2xl border border-graphite/5 overflow-hidden flex items-center justify-center">
+                  <p className="text-graphite/40 tracking-widest uppercase text-sm">
+                    {t("ultraformer.videoPlaceholder", "Video (coming soon)")}
+                  </p>
                 </div>
               </motion.div>
 
