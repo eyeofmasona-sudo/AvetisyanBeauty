@@ -78,8 +78,8 @@ const realSpecialists: SpecialistItem[] = [
 
 const serviceImageById: Record<string, string> = {
   ultraformer: "/images/services/ultraformer-hero.png",
-  smas: "/images/services/smas-lifting-card.png",
-  goldensun: "/images/services/golden-sun-service.png",
+  smas: "/images/services/wrinkle-reduction-card.png",
+  goldensun: "/images/services/golden-sun-before-after.png",
   "body-contouring": "/images/services/body-contouring-card.png",
   "skin-rejuvenation": "/images/services/skin-rejuvenation-card.png",
 };

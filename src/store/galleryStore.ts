@@ -24,43 +24,64 @@ interface GalleryStore {
 const defaultCases: GalleryCase[] = [
   {
     id: "1",
-    protocol: "Ultraformer III",
-    patientDesc: "Patient: 42 y.o. / 1 Session",
-    category: "ultraformer",
-    beforeImage: "https://images.unsplash.com/photo-1515377905703-c4788e51af15?q=80&w=1000&auto=format&fit=crop",
-    afterImage: "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?q=80&w=1000&auto=format&fit=crop"
+    protocol: "Wrinkle Reduction",
+    patientDesc: "Natural facial smoothing / 1 Session",
+    category: "face",
+    beforeImage: "/images/results/wrinkle-before.png",
+    afterImage: "/images/results/wrinkle-after.png"
   },
   {
     id: "2",
     protocol: "Golden Sun",
-    patientDesc: "Patient: 35 y.o. / 3 Sessions",
+    patientDesc: "Even bronze tone / 1 Session",
     category: "goldensun",
-    beforeImage: "https://images.unsplash.com/photo-1549405622-c38a221f148e?q=80&w=1000&auto=format&fit=crop",
-    afterImage: "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?q=80&w=1000&auto=format&fit=crop"
+    beforeImage: "/images/services/golden-sun-before-after.png",
+    afterImage: "/images/services/golden-sun-before-after.png"
   },
   {
     id: "3",
-    protocol: "Skin Rejuvenation",
-    patientDesc: "Patient: 28 y.o. / 5 Sessions",
-    category: "skin",
-    beforeImage: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=1000&auto=format&fit=crop",
-    afterImage: "https://images.unsplash.com/photo-1552693673-1bf958298935?q=80&w=1000&auto=format&fit=crop"
+    protocol: "SMAS Lifting Protocol",
+    patientDesc: "Lower face tightening / 1 Session",
+    category: "ultraformer",
+    beforeImage: "/images/results/face-before.png",
+    afterImage: "/images/results/face-after.png"
   },
   {
     id: "4",
-    protocol: "SMAS Lifting Protocol",
-    patientDesc: "Patient: 45 y.o. / 2 Sessions",
-    category: "face",
-    beforeImage: "https://images.unsplash.com/photo-1596755389378-c31d21fd1273?q=80&w=1000&auto=format&fit=crop",
-    afterImage: "https://images.unsplash.com/photo-1533423996375-f91444985df2?q=80&w=1000&auto=format&fit=crop"
+    protocol: "Skin Rejuvenation",
+    patientDesc: "Texture and glow refinement",
+    category: "skin",
+    beforeImage: "/images/services/skin-rejuvenation-card.png",
+    afterImage: "/images/services/skin-rejuvenation-card.png"
   }
 ];
+
+const defaultCaseById = new Map(defaultCases.map(item => [item.id, item]));
+
+const normalizeGalleryCases = (cases: GalleryCase[] = defaultCases) =>
+  cases.map((item) => {
+    const defaultCase = defaultCaseById.get(item.id);
+    const hasExternalImage = [item.beforeImage, item.afterImage].some(image => image?.includes("images.unsplash.com"));
+
+    if (!defaultCase || !hasExternalImage) {
+      return item;
+    }
+
+    return {
+      ...item,
+      protocol: defaultCase.protocol,
+      patientDesc: defaultCase.patientDesc,
+      category: defaultCase.category,
+      beforeImage: defaultCase.beforeImage,
+      afterImage: defaultCase.afterImage,
+    };
+  });
 
 export const loadGalleryFromDB = async () => {
   try {
     const docSnap = await getDoc(doc(db, 'site', 'gallery'));
     if (docSnap.exists()) {
-      useGalleryStore.setState({ cases: docSnap.data().cases as GalleryCase[] });
+      useGalleryStore.setState({ cases: normalizeGalleryCases(docSnap.data().cases as GalleryCase[]) });
     }
   } catch (e) {
     console.error("Failed to load gallery from DB", e);
@@ -82,17 +103,17 @@ export const useGalleryStore = create<GalleryStore>()(
     (set, get) => ({
       cases: defaultCases,
       addCase: async (newCase) => {
-        const newCases = [...get().cases, { ...newCase, id: Date.now().toString() }];
+        const newCases = normalizeGalleryCases([...get().cases, { ...newCase, id: Date.now().toString() }]);
         set({ cases: newCases });
         await saveGalleryToDB(newCases);
       },
       updateCase: async (id, updatedCase) => {
-        const newCases = get().cases.map(c => c.id === id ? { ...c, ...updatedCase } : c);
+        const newCases = normalizeGalleryCases(get().cases.map(c => c.id === id ? { ...c, ...updatedCase } : c));
         set({ cases: newCases });
         await saveGalleryToDB(newCases);
       },
       deleteCase: async (id) => {
-        const newCases = get().cases.filter(c => c.id !== id);
+        const newCases = normalizeGalleryCases(get().cases.filter(c => c.id !== id));
         set({ cases: newCases });
         await saveGalleryToDB(newCases);
       }
