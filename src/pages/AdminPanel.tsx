@@ -57,7 +57,33 @@ export function AdminPanel() {
   const [loginError, setLoginError] = useState('');
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
 
+  const uploadToBackend = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData
+    });
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+    const data = await response.json();
+    return data.url;
+  };
+
   const uploadFile = async (file: File): Promise<string> => {
+    // The direct browser -> Firebase Storage upload only works when signed in
+    // with the bootstrapped Firebase (Gmail) account, since Storage rules are
+    // tied to that identity. The username/password admin login has no Firebase
+    // session, so attempting the direct upload there always uploads the whole
+    // file just to be rejected, then re-uploads via the backend — doubling the
+    // transfer. Only take the direct single-hop path when a Firebase session
+    // actually exists; otherwise go straight to the cookie-authenticated
+    // backend endpoint.
+    if (!auth.currentUser) {
+      return uploadToBackend(file);
+    }
     try {
       const { storage } = await import('../lib/firebase');
       const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
@@ -68,19 +94,9 @@ export function AdminPanel() {
       return downloadURL;
     } catch (e: any) {
       console.error("Firebase upload error:", e);
-      // Fallback to local server upload if Firebase storage fails (e.g., missing bucket/permissions)
-      const formData = new FormData();
-      formData.append('file', file);
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-      const data = await response.json();
-      return data.url;
+      // Fallback to the backend upload if the direct Storage write fails
+      // (e.g., missing bucket/permissions).
+      return uploadToBackend(file);
     }
   };
 
