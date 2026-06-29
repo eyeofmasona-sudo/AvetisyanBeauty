@@ -6,7 +6,6 @@ import { HeroSection } from "./components/HeroSection";
 import { ServicesSection } from "./components/ServicesSection";
 import { ResultsSection } from "./components/ResultsSection";
 import { SpecialistsSection } from "./components/SpecialistsSection";
-import { TrustSection } from "./components/TrustSection";
 import { InstagramCarousel } from "./components/InstagramCarousel";
 import { VideoCarousel } from "./components/VideoCarousel";
 import { Footer } from "./components/Footer";
@@ -61,9 +60,6 @@ function HomePage() {
         </ScrollReveal>
         <ScrollReveal>
           <SpecialistsSection />
-        </ScrollReveal>
-        <ScrollReveal>
-          <TrustSection />
         </ScrollReveal>
         <ScrollReveal>
           <InstagramCarousel />
