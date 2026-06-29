@@ -728,19 +728,16 @@ async function startServer() {
     "video/quicktime": ".mov",
   };
 
-  const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, uploadsDir);
-    },
-    filename: (req, file, cb) => {
-      const ext = ALLOWED_UPLOAD_TYPES[file.mimetype] || path.extname(file.originalname);
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-    }
-  });
+  // Files are uploaded to Firebase Storage (persistent) rather than the local
+  // container disk, which is ephemeral on Cloud Run and would lose uploads on
+  // every restart/redeploy. Buffer the file in memory, then write it to the
+  // bucket with a Firebase download token so the returned URL is publicly
+  // readable on the site.
+  const STORAGE_BUCKET =
+    process.env.FIREBASE_STORAGE_BUCKET || 'gen-lang-client-0533202242.firebasestorage.app';
 
   const upload = multer({
-    storage,
+    storage: multer.memoryStorage(),
     limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit (videos are the largest expected upload)
     fileFilter: (req, file, cb) => {
       if (!ALLOWED_UPLOAD_TYPES[file.mimetype]) {
@@ -750,18 +747,38 @@ async function startServer() {
     },
   });
 
-  // Expose public folder statically (for uploads)
+  // Still serve any legacy files that were written to the local uploads folder
+  // before the move to Firebase Storage.
   app.use('/uploads', express.static(uploadsDir));
 
   app.post("/api/upload", apiRateLimit, requireAdmin, (req, res) => {
-    upload.single('file')(req, res, (err: any) => {
+    upload.single('file')(req, res, async (err: any) => {
       if (err) {
         return res.status(400).json({ error: err.message || "Upload rejected" });
       }
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
-      res.json({ url: `/uploads/${req.file.filename}` });
+      try {
+        const ext = ALLOWED_UPLOAD_TYPES[req.file.mimetype] || path.extname(req.file.originalname);
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const objectPath = `uploads/${req.file.fieldname}-${uniqueSuffix}${ext}`;
+        const downloadToken = crypto.randomUUID();
+        const bucket = getStorage(firebaseAdminApp).bucket(STORAGE_BUCKET);
+        await bucket.file(objectPath).save(req.file.buffer, {
+          resumable: false,
+          contentType: req.file.mimetype,
+          metadata: {
+            contentType: req.file.mimetype,
+            metadata: { firebaseStorageDownloadTokens: downloadToken },
+          },
+        });
+        const url = `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodeURIComponent(objectPath)}?alt=media&token=${downloadToken}`;
+        res.json({ url });
+      } catch (e) {
+        console.error("Firebase upload error", e);
+        res.status(500).json({ error: "Failed to upload file" });
+      }
     });
   });
 
@@ -770,14 +787,24 @@ async function startServer() {
       const { url } = req.body;
       if (!url) return res.status(400).json({ error: "No URL provided" });
 
-      if (url.includes('storage.googleapis.com')) {
-         const filename = url.split('/').pop();
-         if (filename) {
-           const bucket = getStorage(firebaseAdminApp).bucket('gen-lang-client-0533202242.firebasestorage.app');
-           await bucket.file(`uploads/${filename}`).delete().catch(console.error);
-         }
+      if (url.includes('firebasestorage.googleapis.com')) {
+        // Firebase download URL: .../o/<url-encoded object path>?alt=media&token=...
+        const match = url.match(/\/o\/([^?]+)/);
+        const objectPath = match ? decodeURIComponent(match[1]) : null;
+        if (objectPath) {
+          const bucket = getStorage(firebaseAdminApp).bucket(STORAGE_BUCKET);
+          await bucket.file(objectPath).delete().catch(console.error);
+        }
+      } else if (url.includes('storage.googleapis.com')) {
+        // Legacy public URL: https://storage.googleapis.com/<bucket>/uploads/<filename>
+        const filename = (url.split('/').pop() || '').split('?')[0];
+        if (filename) {
+          const bucket = getStorage(firebaseAdminApp).bucket(STORAGE_BUCKET);
+          await bucket.file(`uploads/${filename}`).delete().catch(console.error);
+        }
       } else {
-        const fileName = path.basename(url.split('/').pop() || '');
+        // Legacy local file written before the move to Firebase Storage.
+        const fileName = path.basename((url.split('/').pop() || '').split('?')[0]);
         if (fileName) {
           const filePath = path.join(uploadsDir, fileName);
           if (fs.existsSync(filePath)) {

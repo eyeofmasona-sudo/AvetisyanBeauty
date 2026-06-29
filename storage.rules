@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Images and videos uploaded from the admin panel. Publicly readable so
+    // they render on the site; only the verified clinic admin can write.
+    match /uploads/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.token.email == 'eyeofmasona@gmail.com'
+                   && request.auth.token.email_verified == true;
+    }
+
+    // Everything else is denied by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
