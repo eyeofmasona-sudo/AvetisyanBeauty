@@ -88,9 +88,13 @@ export function GoldenSun() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 1, delay: 0.2 }}
-                className="relative h-[400px] lg:h-[600px] w-full bg-pearl/30 rounded-3xl border border-graphite/5 overflow-hidden flex items-center justify-center bg-gradient-to-br from-gold/10 to-champagne-gold/5"
+                className="relative h-[400px] lg:h-[600px] w-full bg-pearl/30 rounded-3xl border border-graphite/5 overflow-hidden"
               >
-                 <div className="w-48 h-48 rounded-full bg-gold/20 blur-3xl absolute animate-pulse"></div>
+                <img
+                  src="/images/services/golden-sun-hero.png"
+                  alt={t("goldensun.title", "Golden Sun")}
+                  className="w-full h-full object-cover"
+                />
               </motion.div>
             </div>
           </div>
