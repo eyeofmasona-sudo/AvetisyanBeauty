@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { db } from '../lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 
 export interface GalleryCase {
   id: string;
@@ -38,8 +38,18 @@ export const loadGalleryFromDB = async () => {
 
 export const saveGalleryToDB = async (cases: GalleryCase[]) => {
   try {
-    const cleanCases = JSON.parse(JSON.stringify(cases));
-    await setDoc(doc(db, 'site', 'gallery'), { cases: cleanCases }, { merge: true });
+    // Routed through the admin-only backend endpoint (cookie-authenticated)
+    // instead of a direct Firestore write, since Firestore's security rules
+    // only allow writes from the bootstrapped Firebase user and the admin
+    // panel also supports a separate username/password login that has no
+    // Firebase session.
+    const res = await fetch('/api/db/site/gallery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ cases }),
+    });
+    if (!res.ok) throw new Error('Failed to save gallery');
   } catch (e) {
     console.error("Failed to save gallery to DB", e);
     throw e;
