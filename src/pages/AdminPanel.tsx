@@ -84,17 +84,34 @@ export function AdminPanel() {
   };
 
   useEffect(() => {
+    let firebaseChecked = false;
+    let cookieChecked = false;
+    const finishLoading = () => {
+      if (firebaseChecked && cookieChecked) setIsAuthLoading(false);
+    };
+
+    fetch('/api/auth/verify', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.authenticated) setIsAuthenticated(true);
+      })
+      .catch(() => {})
+      .finally(() => {
+        cookieChecked = true;
+        finishLoading();
+      });
+
+    let unsubscribe: (() => void) | undefined;
     import('firebase/auth').then(({ onAuthStateChanged }) => {
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe = onAuthStateChanged(auth, (user) => {
         if (user && user.email === 'eyeofmasona@gmail.com') {
           setIsAuthenticated(true);
-        } else {
-          setIsAuthenticated(false);
         }
-        setIsAuthLoading(false);
+        firebaseChecked = true;
+        finishLoading();
       });
-      return () => unsubscribe();
     });
+    return () => unsubscribe?.();
   }, []);
   const [formData, setFormData] = useState<Omit<GalleryCase, 'id'>>({
     protocol: "",
@@ -294,6 +311,27 @@ export function AdminPanel() {
     }
   };
 
+  const handleCredentialsLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setLoginError('');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(loginForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsAuthenticated(true);
+      } else {
+        setLoginError(data.error || 'Invalid credentials');
+      }
+    } catch (error: any) {
+      setLoginError(error.message || 'Login failed');
+    }
+  };
+
   const handleLogout = async () => {
     try {
       const { signOut } = await import('firebase/auth');
@@ -325,12 +363,47 @@ export function AdminPanel() {
           </div>
           <div className="space-y-6">
             {loginError && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">{loginError}</div>}
-            <button 
-              onClick={handleLogin} 
+            <button
+              onClick={handleLogin}
               className="w-full bg-graphite text-white px-8 py-3.5 rounded-xl hover:bg-gold transition-colors font-medium text-sm tracking-wide mt-4"
             >
               Sign In with Google
             </button>
+
+            <div className="flex items-center gap-3 text-graphite/30 text-xs uppercase tracking-widest">
+              <div className="flex-1 h-px bg-graphite/10" />
+              <span>{t("admin.or", "or")}</span>
+              <div className="flex-1 h-px bg-graphite/10" />
+            </div>
+
+            <form onSubmit={handleCredentialsLogin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-graphite/60 mb-1">{t("admin.username", "Username")}</label>
+                <input
+                  type="text"
+                  autoComplete="username"
+                  value={loginForm.username}
+                  onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                  className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-graphite/60 mb-1">{t("admin.password", "Password")}</label>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                  className="w-full border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-pearl text-graphite px-8 py-3.5 rounded-xl hover:bg-gold hover:text-white transition-colors font-medium text-sm tracking-wide"
+              >
+                {t("admin.signIn", "Sign In")}
+              </button>
+            </form>
           </div>
         </div>
       </div>

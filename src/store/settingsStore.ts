@@ -24,8 +24,13 @@ const defaultSettings: SiteSettings = {
   whatsappNumber: '+37433101077',
   videos: [],
   heroVideoUrl: '/videos/hero-background.mp4',
-  heroVideoMobileUrl: '/videos/hero-background.mp4'
+  heroVideoMobileUrl: '/videos/hero-background-mobile.mp4'
 };
+
+// Older settings docs stored the desktop path as the mobile fallback too,
+// since no dedicated mobile video existed yet. Treat that legacy value as
+// "unset" so the new dedicated mobile video applies automatically.
+const LEGACY_MOBILE_URL = '/videos/hero-background.mp4';
 
 interface SettingsState {
   settings: SiteSettings;
@@ -99,7 +104,11 @@ export const useSettingsStore = create<SettingsState>()(
         try {
           const docSnap = await getDoc(doc(db, 'site', 'settings'));
           if (docSnap.exists()) {
-            set({ settings: { ...defaultSettings, ...docSnap.data() as SiteSettings } });
+            const dbSettings = docSnap.data() as SiteSettings;
+            if (dbSettings.heroVideoMobileUrl === LEGACY_MOBILE_URL) {
+              delete dbSettings.heroVideoMobileUrl;
+            }
+            set({ settings: { ...defaultSettings, ...dbSettings } });
           }
         } catch (e) {
           console.error("Failed to load settings from DB", e);
