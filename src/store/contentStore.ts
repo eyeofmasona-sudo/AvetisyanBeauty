@@ -56,7 +56,7 @@ const realSpecialists: SpecialistItem[] = [
     role: "",
     exp: "",
     spec: "",
-    image: "/images/specialists/lilit-hovhannisyan.png",
+    image: "/images/specialists/lika-petrosyan.png",
   },
   {
     id: "maria-avetisyan",
@@ -72,7 +72,7 @@ const realSpecialists: SpecialistItem[] = [
     role: "",
     exp: "",
     spec: "",
-    image: "/images/specialists/lika-petrosyan.jpg",
+    image: "/images/specialists/lilit-hovhannisyan.jpg",
   },
 ];
 
