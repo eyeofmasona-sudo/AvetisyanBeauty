@@ -44,6 +44,7 @@ export function AdminPanel() {
   const [heroVideoMobileInput, setHeroVideoMobileInput] = useState(settings?.heroVideoMobileUrl || "/videos/hero-background.mp4");
   const [isHeroSaving, setIsHeroSaving] = useState(false);
   const [heroSaveSuccess, setHeroSaveSuccess] = useState(false);
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (settings?.whatsappNumber) setWaNumberInput(settings.whatsappNumber);
@@ -1230,24 +1231,29 @@ export function AdminPanel() {
                           className="flex-1 border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold text-sm"
                         />
                         <div className="relative">
-                          <input 
-                            type="file" 
+                          <input
+                            type="file"
                             accept="video/*"
+                            disabled={uploadingKey === 'heroDesktop'}
                             onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
+                                setUploadingKey('heroDesktop');
                                 try {
                                   const url = await uploadFile(file);
                                   setHeroVideoInput(url);
                                 } catch (err) {
                                   alert("Upload failed");
+                                } finally {
+                                  setUploadingKey(null);
                                 }
                               }
                             }}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                           />
-                          <button className="h-full px-4 rounded-xl bg-graphite text-white text-sm font-medium hover:bg-gold transition-colors">
-                            Upload
+                          <button disabled={uploadingKey === 'heroDesktop'} className="h-full px-4 rounded-xl bg-graphite text-white text-sm font-medium hover:bg-gold transition-colors flex items-center gap-2 disabled:opacity-50">
+                            {uploadingKey === 'heroDesktop' && <Loader2 size={14} className="animate-spin" />}
+                            {uploadingKey === 'heroDesktop' ? 'Uploading...' : 'Upload'}
                           </button>
                         </div>
                       </div>
@@ -1264,24 +1270,29 @@ export function AdminPanel() {
                           className="flex-1 border border-graphite/10 rounded-xl px-4 py-3 focus:outline-none focus:border-gold text-sm"
                         />
                         <div className="relative">
-                          <input 
-                            type="file" 
+                          <input
+                            type="file"
                             accept="video/*"
+                            disabled={uploadingKey === 'heroMobile'}
                             onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
+                                setUploadingKey('heroMobile');
                                 try {
                                   const url = await uploadFile(file);
                                   setHeroVideoMobileInput(url);
                                 } catch (err) {
                                   alert("Upload failed");
+                                } finally {
+                                  setUploadingKey(null);
                                 }
                               }
                             }}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                           />
-                          <button className="h-full px-4 rounded-xl bg-graphite text-white text-sm font-medium hover:bg-gold transition-colors">
-                            Upload
+                          <button disabled={uploadingKey === 'heroMobile'} className="h-full px-4 rounded-xl bg-graphite text-white text-sm font-medium hover:bg-gold transition-colors flex items-center gap-2 disabled:opacity-50">
+                            {uploadingKey === 'heroMobile' && <Loader2 size={14} className="animate-spin" />}
+                            {uploadingKey === 'heroMobile' ? 'Uploading...' : 'Upload'}
                           </button>
                         </div>
                       </div>
@@ -1745,24 +1756,29 @@ export function AdminPanel() {
                     placeholder="https://example.com/video.mp4"
                   />
                   <div className="relative">
-                    <input 
-                      type="file" 
+                    <input
+                      type="file"
                       accept="video/*"
+                      disabled={uploadingKey === 'videoModal'}
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          setUploadingKey('videoModal');
                           try {
                             const url = await uploadFile(file);
                             setVideoFormData({...videoFormData, videoUrl: url});
                           } catch (err) {
                             alert("Upload failed");
+                          } finally {
+                            setUploadingKey(null);
                           }
                         }
                       }}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                     />
-                    <button className="h-full px-6 rounded-xl bg-graphite text-white text-sm font-medium hover:bg-gold transition-colors">
-                      Upload
+                    <button disabled={uploadingKey === 'videoModal'} className="h-full px-6 rounded-xl bg-graphite text-white text-sm font-medium hover:bg-gold transition-colors flex items-center gap-2 disabled:opacity-50">
+                      {uploadingKey === 'videoModal' && <Loader2 size={14} className="animate-spin" />}
+                      {uploadingKey === 'videoModal' ? 'Uploading...' : 'Upload'}
                     </button>
                   </div>
                 </div>
