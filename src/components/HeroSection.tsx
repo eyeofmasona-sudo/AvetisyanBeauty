@@ -25,7 +25,15 @@ export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const videoSrc = (isMobile && settings?.heroVideoMobileUrl) ? settings.heroVideoMobileUrl : (settings?.heroVideoUrl || "/videos/hero-background.mp4");
+  const desktopVideoSrc = settings?.heroVideoUrl || "/videos/hero-background.mp4";
+  // Fall back to the dedicated mobile file whenever no mobile-specific video
+  // was saved, or it was accidentally saved identical to the desktop one
+  // (e.g. before the mobile field existed), so mobile never just replays
+  // the desktop video.
+  const mobileVideoSrc = (settings?.heroVideoMobileUrl && settings.heroVideoMobileUrl !== desktopVideoSrc)
+    ? settings.heroVideoMobileUrl
+    : "/videos/hero-background-mobile.mp4";
+  const videoSrc = isMobile ? mobileVideoSrc : desktopVideoSrc;
 
   useEffect(() => {
     if (!videoRef.current) return;
