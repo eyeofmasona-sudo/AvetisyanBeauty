@@ -782,6 +782,59 @@ async function startServer() {
     });
   });
 
+  // Issue a short-lived V4 signed URL so the browser can upload large files
+  // (especially videos) directly to Firebase Storage in a single network hop,
+  // instead of streaming them through this backend (browser -> Cloud Run ->
+  // Storage, i.e. transferring the file twice). Authorization here is the admin
+  // cookie (requireAdmin); the signed URL itself grants the write, so this also
+  // works for the username/password admin login which has no Firebase identity.
+  // The object is tagged with a Firebase download token so the resulting URL is
+  // publicly readable on the site, matching the multipart upload path above.
+  //
+  // Requirements on the live environment for this fast path to succeed:
+  //  - the runtime service account can sign URLs (Service Account Token Creator
+  //    role / IAM SignBlob), and
+  //  - the bucket has a CORS rule allowing PUT (and the
+  //    x-goog-meta-firebasestoragedownloadtokens / content-type headers) from
+  //    the site origin.
+  // If either is missing the signed URL or the browser PUT fails, and the
+  // client falls back to the multipart /api/upload endpoint, so uploads keep
+  // working either way.
+  app.post("/api/upload/signed-url", apiRateLimit, requireAdmin, async (req, res) => {
+    try {
+      const { mimetype } = req.body || {};
+      const ext = ALLOWED_UPLOAD_TYPES[mimetype];
+      if (!ext) {
+        return res.status(400).json({ error: "Unsupported file type" });
+      }
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const objectPath = `uploads/file-${uniqueSuffix}${ext}`;
+      const downloadToken = crypto.randomUUID();
+      const bucket = getStorage(firebaseAdminApp).bucket(STORAGE_BUCKET);
+      const [uploadUrl] = await bucket.file(objectPath).getSignedUrl({
+        version: 'v4',
+        action: 'write',
+        expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+        contentType: mimetype,
+        extensionHeaders: {
+          'x-goog-meta-firebaseStorageDownloadTokens': downloadToken,
+        },
+      });
+      const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodeURIComponent(objectPath)}?alt=media&token=${downloadToken}`;
+      res.json({
+        uploadUrl,
+        downloadUrl,
+        headers: {
+          'Content-Type': mimetype,
+          'x-goog-meta-firebaseStorageDownloadTokens': downloadToken,
+        },
+      });
+    } catch (e) {
+      console.error("Signed URL error", e);
+      res.status(500).json({ error: "Failed to create upload URL" });
+    }
+  });
+
   app.delete("/api/upload", apiRateLimit, requireAdmin, async (req, res) => {
     try {
       const { url } = req.body;
