@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { db } from '../lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 
 export interface SectionContent {
   title?: string;
@@ -289,8 +289,18 @@ export const loadContentFromDB = async () => {
 
 export const saveContentToDB = async (content: LocalizedContent) => {
   try {
-    const cleanContent = JSON.parse(JSON.stringify(content));
-    await setDoc(doc(db, 'site', 'content'), cleanContent, { merge: true });
+    // Routed through the admin-only backend endpoint (cookie-authenticated)
+    // instead of a direct Firestore write, since Firestore's security rules
+    // only allow writes from the bootstrapped Firebase user and the admin
+    // panel also supports a separate username/password login that has no
+    // Firebase session.
+    const res = await fetch('/api/db/site/content', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(content),
+    });
+    if (!res.ok) throw new Error('Failed to save content');
   } catch (e) {
     console.error("Failed to save content to DB", e);
     throw e;

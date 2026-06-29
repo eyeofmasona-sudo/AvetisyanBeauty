@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { db } from '../lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 
 export interface SiteVideo {
   id: string;
@@ -117,9 +117,18 @@ export const useSettingsStore = create<SettingsState>()(
       
       saveToDB: async (settings) => {
         try {
-          // Firebase doesn't allow undefined values, we serialize and deserialize to strip them
-          const cleanSettings = JSON.parse(JSON.stringify(settings));
-          await setDoc(doc(db, 'site', 'settings'), cleanSettings, { merge: true });
+          // Writes go through the admin-only backend endpoint (authenticated
+          // via the admin_token cookie) rather than directly to Firestore,
+          // since Firestore's security rules only allow writes from the
+          // bootstrapped Firebase user and the admin panel also supports a
+          // separate username/password login that has no Firebase session.
+          const res = await fetch('/api/db/site/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(settings),
+          });
+          if (!res.ok) throw new Error('Failed to save settings');
         } catch (e) {
           console.error("Failed to save settings to DB", e);
           throw e;
