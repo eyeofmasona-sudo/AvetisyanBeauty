@@ -38,65 +38,43 @@ export function GoldenSun() {
           </div>
 
           <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-              <div>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8 }}
-                >
-                  <span className="py-1.5 px-4 rounded-full border border-graphite/10 text-xs tracking-widest text-gold uppercase bg-pearl">
-                    {t("goldensun.badge", "Featured")}
-                  </span>
-                </motion.div>
-                
-                <motion.h1
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.1 }}
-                  className="mt-8 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display text-graphite"
-                >
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="grid grid-cols-1 lg:grid-cols-2 rounded-[2.5rem] border border-graphite/5 overflow-hidden bg-white shadow-sm"
+            >
+              <div className="relative h-[300px] md:h-[380px] lg:h-auto w-full">
+                <img
+                  src="/images/services/golden-sun-hero.png"
+                  alt={t("goldensun.title", "Golden Sun")}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <div className="p-8 md:p-12 lg:p-16 flex flex-col justify-center">
+                <span className="self-start py-1.5 px-4 rounded-full border border-graphite/10 text-xs tracking-widest text-gold uppercase bg-pearl">
+                  {t("goldensun.badge", "Featured")}
+                </span>
+
+                <h1 className="mt-8 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-display text-graphite break-words">
                   {t("goldensun.title", "Golden Sun")}
-                </motion.h1>
+                </h1>
 
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.2 }}
-                  className="mt-8 text-lg font-light text-graphite/70 leading-relaxed max-w-xl"
-                >
+                <p className="mt-6 text-lg font-light text-graphite/70 leading-relaxed">
                   {t("goldensun.desc", "Discover the radiant benefits of Golden Sun.")}
-                </motion.p>
+                </p>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.3 }}
-                  className="mt-12 flex gap-4"
-                >
+                <div className="mt-10 flex gap-4">
                   <button
                     onClick={() => setIsBookingOpen(true)}
                     className="px-8 py-4 bg-graphite text-white rounded-full font-medium hover:bg-gold transition-colors duration-300 shadow-xl shadow-graphite/10"
                   >
                     {t("goldensun.bookBtn", "Book Golden Sun")}
                   </button>
-                </motion.div>
+                </div>
               </div>
-
-              {/* Visualization */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 1, delay: 0.2 }}
-                className="relative h-[400px] lg:h-[600px] w-full bg-pearl/30 rounded-3xl border border-graphite/5 overflow-hidden"
-              >
-                <img
-                  src="/images/services/golden-sun-hero.png"
-                  alt={t("goldensun.title", "Golden Sun")}
-                  className="w-full h-full object-cover"
-                />
-              </motion.div>
-            </div>
+            </motion.div>
           </div>
         </section>
 

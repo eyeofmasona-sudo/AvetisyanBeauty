@@ -121,10 +121,12 @@ export function UltraformerIII() {
                 <p className="text-graphite/70 font-light leading-relaxed mb-8">
                   {t("ultraformer.howDesc")}
                 </p>
-                <div className="aspect-video bg-graphite/5 rounded-2xl border border-graphite/5 overflow-hidden flex items-center justify-center">
-                  <p className="text-graphite/40 tracking-widest uppercase text-sm">
-                    {t("ultraformer.videoPlaceholder")}
-                  </p>
+                <div className="aspect-video bg-graphite/5 rounded-2xl border border-graphite/5 overflow-hidden">
+                  <img
+                    src="/images/services/ultraformer-howitworks.png"
+                    alt={t("ultraformer.title", "Ultraformer III")}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               </motion.div>
 
