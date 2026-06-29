@@ -1,10 +1,17 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
+import { Lock } from "lucide-react";
+import { useContentStore } from "../store/contentStore";
 
 export function Footer() {
   const { t } = useTranslation();
-  const { lang } = useParams();
+  const { lang = "hy" } = useParams();
+  const { content } = useContentStore();
+
+  const services =
+    content[lang as "hy" | "ru" | "en"]?.services?.items ||
+    content["hy"].services.items;
 
   return (
     <footer className="bg-white pt-24 pb-12 border-t border-graphite/10 relative z-10">
@@ -40,14 +47,24 @@ export function Footer() {
               {t("footer.treatments")}
             </h4>
             <ul className="flex flex-col gap-4 text-graphite/60 font-light">
-              <li>
-                <Link to={`/${lang}/ultraformer`} className="hover:text-gold transition-colors">
-                  Ultraformer III
-                </Link>
-              </li>
+              {services.map((service) =>
+                service.href ? (
+                  <li key={service.id}>
+                    <Link to={service.href} className="hover:text-gold transition-colors">
+                      {service.title}
+                    </Link>
+                  </li>
+                ) : (
+                  <li key={service.id}>
+                    <Link to={`/${lang}#services`} className="hover:text-gold transition-colors">
+                      {service.title}
+                    </Link>
+                  </li>
+                )
+              )}
               <li>
                 <Link to={`/${lang}/gallery`} className="hover:text-gold transition-colors">
-                  Before & After
+                  {t("results.after")} / {t("results.before")}
                 </Link>
               </li>
             </ul>
@@ -79,6 +96,14 @@ export function Footer() {
           <p>{t("footer.rights")}</p>
           {/* BLOCKER: no Privacy Policy / Terms of Service pages exist yet;
               links removed rather than pointing to "#" placeholders. */}
+          <Link
+            to={`/${lang}/admin`}
+            aria-label={t("admin.signIn", "Admin")}
+            className="flex items-center gap-1.5 text-graphite/40 hover:text-gold transition-colors"
+          >
+            <Lock size={12} />
+            <span>{t("admin.signIn", "Admin")}</span>
+          </Link>
         </div>
       </div>
     </footer>
