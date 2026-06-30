@@ -68,14 +68,15 @@ export function BeforeAfterSlider({
     >
       {/* After Image (Background) */}
       <div className="absolute inset-0 bg-[#111111] flex items-center justify-center overflow-hidden">
-        <div 
+        <div
           ref={afterImageRef}
-          className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-150"
+          className="absolute inset-0"
         >
           <div className="absolute inset-0 opacity-40 mix-blend-multiply bg-gradient-to-tr from-gold/10 to-transparent"></div>
-          {/* We add a texture to simulate skin details so zoom has an effect */}
-          <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${afterImage})` }}></div>
-          <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] mix-blend-overlay"></div>
+          {/* bg-cover fills the slider with the image (no black bars). The
+              slider's own aspect-ratio matches the typical before/after photo
+              ratio so cropping is minimal. */}
+          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${afterImage})` }}></div>
           <div className="flex items-center justify-center w-full h-full">
             <p className="text-graphite/40 tracking-widest uppercase text-xl font-display">
               {afterLabel || t("results.after")}
@@ -90,14 +91,12 @@ export function BeforeAfterSlider({
         style={{ width: `${sliderPosition}%` }}
       >
         <div className="absolute inset-0 w-full h-full">
-          <div 
+          <div
             ref={beforeImageRef}
-            className="absolute inset-0 bg-[#080808] transition-transform duration-500 ease-out group-hover:scale-150"
+            className="absolute inset-0 bg-[#080808]"
             style={{ width: containerRef.current ? containerRef.current.offsetWidth : '100vw' }}
           >
-            <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${beforeImage})` }}></div>
-            {/* Added texture to simulate skin imperfections for before image */}
-            <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] mix-blend-overlay"></div>
+            <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${beforeImage})` }}></div>
             <div className="flex items-center justify-center w-full h-full">
               <p className="text-graphite/40 tracking-widest uppercase text-xl font-display min-w-[200px] text-center absolute left-1/2 -translate-x-1/2">
                 {beforeLabel || t("results.before")}

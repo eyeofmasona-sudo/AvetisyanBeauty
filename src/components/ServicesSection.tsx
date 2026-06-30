@@ -63,6 +63,7 @@ export function ServicesSection() {
                   src={service.image_url}
                   alt={service.title}
                   aspect="aspect-[16/10] md:aspect-[4/3]"
+                  fit="contain"
                   objectPosition="object-center"
                 />
               ) : (

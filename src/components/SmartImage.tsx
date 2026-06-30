@@ -8,9 +8,13 @@ import React from "react";
  *   - prevents layout shift when `aspect` prop is provided (Tailwind class,
  *     e.g. "aspect-[4/3]")
  *   - sets explicit width/height when provided (better CLS)
+ *   - supports `fit` = "cover" (default, crops to fill) or "contain" (no crop,
+ *     letterboxed — better for product photos where the whole subject must be
+ *     visible)
  *
  * Usage:
  *   <SmartImage src="/images/services/foo.png" alt="..." aspect="aspect-[4/3]" />
+ *   <SmartImage src="..." alt="..." fit="contain" aspect="aspect-square" />
  *
  * If `src` is a remote URL (http/https or starts with /uploads/), no WebP
  * swap is attempted — we just lazy-load it.
@@ -21,6 +25,7 @@ interface SmartImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   alt: string;
   aspect?: string;           // e.g. "aspect-[4/3]"
   objectPosition?: string;   // e.g. "object-top", default "object-center"
+  fit?: "cover" | "contain"; // default: "cover" (fills + crops). "contain" preserves whole image.
   eager?: boolean;           // set true for above-the-fold images (hero, LCP)
   width?: number;
   height?: number;
@@ -46,6 +51,7 @@ export function SmartImage({
   alt,
   aspect,
   objectPosition = "object-center",
+  fit = "cover",
   eager = false,
   width,
   height,
@@ -56,6 +62,7 @@ export function SmartImage({
   const webpSrc = toWebp(src);
   const loading = eager ? "eager" : "lazy";
   const fetchPriority = eager ? "high" : "auto";
+  const fitClass = fit === "contain" ? "object-contain" : "object-cover";
 
   const imgEl = (
     <img
@@ -67,7 +74,7 @@ export function SmartImage({
       decoding="async"
       // @ts-ignore — fetchPriority is a valid HTML attribute (React 18+)
       fetchpriority={fetchPriority}
-      className={`h-full w-full object-cover ${objectPosition} ${className}`}
+      className={`h-full w-full ${fitClass} ${objectPosition} ${className}`}
       {...rest}
     />
   );

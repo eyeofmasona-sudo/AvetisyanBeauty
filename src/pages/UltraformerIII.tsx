@@ -124,6 +124,7 @@ export function UltraformerIII() {
                   <SmartImage
                     src="/images/services/ultraformer-howitworks.png"
                     alt={t("ultraformer.title", "Ultraformer III")}
+                    fit="contain"
                   />
                 </div>
               </motion.div>
