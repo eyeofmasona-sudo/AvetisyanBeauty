@@ -1,6 +1,5 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { ArrowUpRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { useContentStore } from '../store/contentStore';
@@ -74,15 +73,6 @@ export function ServicesSection() {
               <div className="p-5 md:p-10 flex flex-col flex-1 relative z-10">
                 {/* Subtle background glow on hover */}
                 <div className="absolute inset-0 bg-gradient-to-br from-gold/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-
-                <div className="flex justify-end items-start mb-4 md:mb-12 relative z-10">
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full border border-graphite/10 flex items-center justify-center group-hover:bg-gold group-hover:text-white group-hover:border-gold transition-all duration-300 shrink-0 ml-4">
-                    <ArrowUpRight
-                      size={20}
-                      className="transition-transform duration-300 group-hover:scale-110"
-                    />
-                  </div>
-                </div>
 
                 <div className="relative z-10 mt-auto">
                   <div className="flex justify-between items-start mb-3 md:mb-4 gap-3">

@@ -74,7 +74,7 @@ export function BeforeAfterSlider({
         >
           <div className="absolute inset-0 opacity-40 mix-blend-multiply bg-gradient-to-tr from-gold/10 to-transparent"></div>
           {/* We add a texture to simulate skin details so zoom has an effect */}
-          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${afterImage})` }}></div>
+          <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${afterImage})` }}></div>
           <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] mix-blend-overlay"></div>
           <div className="flex items-center justify-center w-full h-full">
             <p className="text-graphite/40 tracking-widest uppercase text-xl font-display">
@@ -95,7 +95,7 @@ export function BeforeAfterSlider({
             className="absolute inset-0 bg-[#080808] transition-transform duration-500 ease-out group-hover:scale-150"
             style={{ width: containerRef.current ? containerRef.current.offsetWidth : '100vw' }}
           >
-            <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${beforeImage})` }}></div>
+            <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${beforeImage})` }}></div>
             {/* Added texture to simulate skin imperfections for before image */}
             <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] mix-blend-overlay"></div>
             <div className="flex items-center justify-center w-full h-full">
