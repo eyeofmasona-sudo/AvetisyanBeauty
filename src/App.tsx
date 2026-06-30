@@ -9,6 +9,7 @@ import { SpecialistsSection } from "./components/SpecialistsSection";
 import { InstagramCarousel } from "./components/InstagramCarousel";
 import { VideoCarousel } from "./components/VideoCarousel";
 import { Footer } from "./components/Footer";
+import { ContactSection } from "./components/ContactSection";
 import { BookingModal } from "./components/BookingModal";
 import { AnalyticsProvider, CookieBanner } from "./components/AnalyticsProvider";
 
@@ -63,6 +64,9 @@ function HomePage() {
         </ScrollReveal>
         <ScrollReveal>
           <InstagramCarousel />
+        </ScrollReveal>
+        <ScrollReveal>
+          <ContactSection />
         </ScrollReveal>
       </main>
       <Footer />
