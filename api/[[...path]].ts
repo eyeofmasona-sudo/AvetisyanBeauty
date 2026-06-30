@@ -11,8 +11,10 @@ async function getApp(): Promise<Express> {
   if (_app) return _app;
   if (_appPromise) return _appPromise;
   _appPromise = (async () => {
-    const { createApp } = await import('../server.ts');
-    const app = await createApp();
+    // Vercel compiles .ts → .js at build time, so we must import without the
+    // extension to let the bundler resolve whichever file exists at runtime.
+    const serverModule = await import('../server.js');
+    const app = await serverModule.createApp();
     _app = app;
     return app;
   })();
