@@ -44,10 +44,12 @@ export function GoldenSun() {
               transition={{ duration: 0.8 }}
               className="grid grid-cols-1 lg:grid-cols-2 rounded-[2.5rem] border border-graphite/5 overflow-hidden bg-white shadow-sm"
             >
-              <div className="relative h-[300px] md:h-[380px] lg:h-auto w-full">
+              <div className="relative h-[300px] md:h-[380px] lg:h-auto w-full lg:aspect-auto aspect-[4/3]">
                 <img
                   src="/images/services/golden-sun-hero.png"
                   alt={t("goldensun.title", "Golden Sun")}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
               </div>

@@ -167,15 +167,14 @@
     color: #C89B4E !important;
   }
   
-  /* Luxury Cards (replaces basic borders on bg-white, bg-ivory, bg-porcelain) */
-  .bg-white.rounded-\[2rem\], .bg-ivory.rounded-\[2rem\], .bg-pearl.rounded-\[2rem\], .bg-porcelain.rounded-\[2rem\], .bg-white.rounded-3xl, .bg-ivory.rounded-3xl, .bg-ivory, .bg-porcelain {
+  /* Luxury Cards (only on explicit large card containers, not on every bg-ivory element) */
+  .bg-white.rounded-\[2rem\], .bg-ivory.rounded-\[2rem\], .bg-pearl.rounded-\[2rem\], .bg-porcelain.rounded-\[2rem\], .bg-white.rounded-3xl, .bg-ivory.rounded-3xl {
     background-color: #111111 !important;
     border: 1px solid rgba(200, 155, 78, 0.35) !important;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
-    padding: 2rem !important;
     transition: all 0.4s ease !important;
   }
-  .bg-white.rounded-\[2rem\]:hover, .bg-ivory.rounded-\[2rem\]:hover, .bg-pearl.rounded-\[2rem\]:hover, .bg-porcelain.rounded-\[2rem\]:hover, .bg-white.rounded-3xl:hover, .bg-ivory.rounded-3xl:hover, .bg-ivory:hover, .bg-porcelain:hover {
+  .bg-white.rounded-\[2rem\]:hover, .bg-ivory.rounded-\[2rem\]:hover, .bg-pearl.rounded-\[2rem\]:hover, .bg-porcelain.rounded-\[2rem\]:hover, .bg-white.rounded-3xl:hover, .bg-ivory.rounded-3xl:hover {
     transform: translateY(-2px) !important;
     border-color: #C89B4E !important;
     box-shadow: 0 15px 40px rgba(200, 155, 78, 0.15) !important;
@@ -228,4 +227,50 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-gold);
+}
+
+/* Hide scrollbar utility (used by horizontal carousels on touch devices) */
+.instagram-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ensure all interactive elements meet 44x44 minimum touch target on mobile */
+@media (max-width: 768px) {
+  button, a[role="button"], input[type="submit"], input[type="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Exclude tiny inline icons (chips, language pills in headers etc.) */
+  .touch-min-none, .touch-min-none * {
+    min-height: 0;
+    min-width: 0;
+  }
+}
+
+/* Reduce layout shift: reserve space for lazy-loaded images */
+img[loading="lazy"] {
+  background-color: rgba(200, 155, 78, 0.05);
+}
+
+/* Smoother scrolling on iOS */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Disable hover effects on touch devices (prevents sticky hover state) */
+@media (hover: none) {
+  .group:hover .group-hover\:scale-105,
+  .group:hover .group-hover\:scale-110 {
+    transform: none !important;
+  }
+}
+
+/* Respect prefers-reduced-motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

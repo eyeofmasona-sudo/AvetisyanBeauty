@@ -41,6 +41,19 @@ function LanguageWrapper({ children }: { children: React.ReactNode }) {
 import { loadContentFromDB } from "./store/contentStore";
 import { useSettingsStore } from "./store/settingsStore";
 
+// Lightweight loading spinner shown during lazy-route chunk loading.
+// Replaces <Suspense fallback={<PageLoader />}> which produced a blank screen.
+function PageLoader() {
+  return (
+    <div className="min-h-screen bg-pearl flex items-center justify-center">
+      <div
+        className="w-12 h-12 rounded-full border-2 border-gold/20 border-t-gold animate-spin"
+        aria-label="Loading"
+      />
+    </div>
+  );
+}
+
 function HomePage() {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
 
@@ -98,28 +111,28 @@ export default function App() {
           } />
           <Route path="/:lang/ultraformer" element={
             <LanguageWrapper>
-              <Suspense fallback={null}>
+              <Suspense fallback={<PageLoader />}>
                 <UltraformerIII />
               </Suspense>
             </LanguageWrapper>
           } />
           <Route path="/:lang/golden-sun" element={
             <LanguageWrapper>
-              <Suspense fallback={null}>
+              <Suspense fallback={<PageLoader />}>
                 <GoldenSun />
               </Suspense>
             </LanguageWrapper>
           } />
           <Route path="/:lang/gallery" element={
             <LanguageWrapper>
-              <Suspense fallback={null}>
+              <Suspense fallback={<PageLoader />}>
                 <Gallery />
               </Suspense>
             </LanguageWrapper>
           } />
           <Route path="/:lang/admin" element={
             <LanguageWrapper>
-              <Suspense fallback={null}>
+              <Suspense fallback={<PageLoader />}>
                 <AdminPanel />
               </Suspense>
             </LanguageWrapper>

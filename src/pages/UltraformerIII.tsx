@@ -1,14 +1,13 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { Canvas } from "@react-three/fiber";
-import { Environment, Lightformer } from "@react-three/drei";
 import { SkinLayers3DInteractive } from "../components/3d/SkinLayers3D";
 import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
 import { BookingModal } from "../components/BookingModal";
 import { SEO } from "../components/SEO";
+import { SmartImage } from "../components/SmartImage";
 
 export function UltraformerIII() {
   const { t } = useTranslation();
@@ -91,11 +90,11 @@ export function UltraformerIII() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 1, delay: 0.2 }}
-                className="relative h-[400px] lg:h-[600px] w-full bg-pearl/30 rounded-3xl border border-graphite/5 overflow-hidden"
+                className="relative h-[400px] lg:h-[600px] w-full bg-pearl/30 rounded-2xl lg:rounded-3xl border border-graphite/5 overflow-hidden"
               >
                 <SkinLayers3DInteractive />
-                <div className="absolute bottom-6 left-6 right-6 p-4 bg-white/80 backdrop-blur-md border border-white rounded-2xl z-10 pointer-events-none">
-                  <p className="text-xs font-medium tracking-widest uppercase text-graphite/60 text-center">
+                <div className="absolute bottom-4 left-4 right-4 lg:bottom-6 lg:left-6 lg:right-6 p-3 lg:p-4 bg-white/80 backdrop-blur-md border border-white rounded-xl lg:rounded-2xl z-10 pointer-events-none">
+                  <p className="text-[10px] lg:text-xs font-medium tracking-widest uppercase text-graphite/60 text-center">
                     {t("ultraformer.3d.viz", "Micro & Macro Focused Ultrasound Visualization")}
                   </p>
                 </div>
@@ -122,10 +121,9 @@ export function UltraformerIII() {
                   {t("ultraformer.howDesc")}
                 </p>
                 <div className="aspect-video bg-graphite/5 rounded-2xl border border-graphite/5 overflow-hidden">
-                  <img
+                  <SmartImage
                     src="/images/services/ultraformer-howitworks.png"
                     alt={t("ultraformer.title", "Ultraformer III")}
-                    className="w-full h-full object-cover"
                   />
                 </div>
               </motion.div>

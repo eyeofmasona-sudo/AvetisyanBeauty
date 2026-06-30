@@ -19,10 +19,19 @@ export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Debounce resize events (was firing 60+ times/sec during drag-resize)
+    let raf = 0;
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    const onResize = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(checkMobile);
+    };
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener('resize', onResize, { passive: true } as AddEventListenerOptions);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onResize);
+    };
   }, []);
 
   const desktopVideoSrc = settings?.heroVideoUrl || "/videos/hero-background.mp4";
@@ -47,9 +56,9 @@ export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
   }, [isInView]);
 
   return (
-    <section 
+    <section
       ref={containerRef}
-      className="hero relative min-h-[100dvh] w-full overflow-hidden bg-pearl flex items-center justify-center py-32"
+      className="hero relative min-h-[100dvh] w-full overflow-hidden bg-pearl flex items-center justify-center py-20 md:py-32"
     >
       <video
         ref={videoRef}
@@ -59,7 +68,13 @@ export function HeroSection({ onBookClick }: { onBookClick?: () => void }) {
         muted
         loop
         playsInline
+        // preload="metadata" loads only the first ~100 KB to know duration/dimensions,
+        // the rest streams as it plays. Better than "auto" which can preload the whole file.
         preload="metadata"
+        // disableRemotePlayback prevents iOS from showing AirPlay button overlay
+        disableRemotePlayback
+        // disablePictureInPicture prevents the iOS PiP button on hero video
+        disablePictureInPicture
         src={videoSrc}
         poster="/images/hero-poster.png"
         onError={(e) => {
