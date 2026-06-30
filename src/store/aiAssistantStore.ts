@@ -69,6 +69,27 @@ export interface AIReplyTemplate {
   is_active: boolean;
 }
 
+/**
+ * Meta (Facebook Business) credentials needed for WhatsApp Business API and
+ * Instagram Messaging API webhooks. Stored as encrypted JSON in the `site`
+ * table under key 'meta_credentials'. The server uses these at runtime to:
+ *   - verify incoming webhook signatures (META_APP_SECRET)
+ *   - send outbound replies (WHATSAPP_ACCESS_TOKEN, INSTAGRAM_PAGE_ACCESS_TOKEN)
+ *   - look up phone number ID / Instagram account ID
+ *
+ * The user enters these in the admin panel → AI Assistant → Settings →
+ * "Connect WhatsApp & Instagram" section.
+ */
+export interface MetaCredentials {
+  meta_app_secret: string;
+  meta_verify_token: string;
+  whatsapp_verify_token: string;
+  whatsapp_phone_number_id: string;
+  whatsapp_access_token: string;
+  instagram_account_id: string;
+  instagram_page_access_token: string;
+}
+
 interface AIAssistantState {
   settings: AIAssistantSettings;
   knowledgeBase: AIKnowledgeItem[];
@@ -83,8 +104,13 @@ interface AIAssistantState {
   updateMessageStatus: (threadId: string, messageId: string, status: AIStatus, requires_human?: boolean) => Promise<void>;
   sendReply: (threadId: string, messageId: string, finalReply: string) => Promise<void>;
 
-  addTemplate: (template: Omit<AIReplyTemplate, 'id'>) => void;
-  updateTemplate: (id: string, template: Partial<AIReplyTemplate>) => void;
+  addTemplate: (template: Omit<AIReplyTemplate, 'id'>) => Promise<void>;
+  updateTemplate: (id: string, template: Partial<AIReplyTemplate>) => Promise<void>;
+  deleteTemplate: (id: string) => Promise<void>;
+
+  // Meta (WhatsApp + Instagram) credentials for AI messaging webhooks
+  metaCredentials: MetaCredentials | null;
+  saveMetaCredentials: (creds: Partial<MetaCredentials>) => Promise<void>;
 
   subscribeAIData: () => () => void;
 }
@@ -141,6 +167,7 @@ export const useAIAssistantStore = create<AIAssistantState>()((set, get) => ({
   knowledgeBase: [],
   threads: [],
   templates: defaultTemplates,
+  metaCredentials: null,
 
   updateSettings: async (newSettings) => {
     const settings = { ...get().settings, ...newSettings };
@@ -199,27 +226,51 @@ export const useAIAssistantStore = create<AIAssistantState>()((set, get) => ({
     }
   },
 
-  addTemplate: (template) => set((state) => ({
-    templates: [
-      ...state.templates,
-      {
-        ...template,
-        id: Math.random().toString(36).substring(2, 9)
-      }
-    ]
-  })),
+  addTemplate: async (template) => {
+    const res = await fetch('/api/ai-messaging/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(template),
+    });
+    if (!res.ok) throw new Error('Failed to add template');
+  },
 
-  updateTemplate: (id, template) => set((state) => ({
-    templates: state.templates.map((t) =>
-      t.id === id ? { ...t, ...template } : t
-    )
-  })),
+  updateTemplate: async (id, template) => {
+    const res = await fetch(`/api/ai-messaging/templates/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(template),
+    });
+    if (!res.ok) throw new Error('Failed to update template');
+  },
+
+  deleteTemplate: async (id) => {
+    const res = await fetch(`/api/ai-messaging/templates/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to delete template');
+  },
+
+  saveMetaCredentials: async (creds) => {
+    const merged = { ...get().metaCredentials, ...creds } as MetaCredentials;
+    const res = await fetch('/api/db/site/meta_credentials', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(merged),
+    });
+    if (!res.ok) throw new Error('Failed to save Meta credentials');
+    set({ metaCredentials: merged });
+  },
 
   subscribeAIData: () => {
     const channels: RealtimeChannel[] = [];
     let threadsChannel: RealtimeChannel | null = null;
 
-    // 1. Initial load — settings + knowledge + threads (with messages).
+    // 1. Initial load — settings + knowledge + threads (with messages) + templates + meta creds.
     (async () => {
       // Settings
       const storedSettings = await fetchSiteRow<Partial<AIAssistantSettings>>('ai_settings');
@@ -255,6 +306,26 @@ export const useAIAssistantStore = create<AIAssistantState>()((set, get) => ({
           })
         );
         set({ threads: threadsWithMessages });
+      }
+
+      // Templates (load from DB; if table doesn't exist yet, fall back to defaults)
+      try {
+        const { data: tplData, error: tplErr } = await supabase
+          .from('ai_templates')
+          .select('*')
+          .order('created_at', { ascending: true });
+        if (!tplErr && tplData && tplData.length > 0) {
+          set({ templates: tplData as AIReplyTemplate[] });
+        }
+      } catch (e) {
+        // Table might not exist yet (migration not run). Keep defaults.
+        console.warn('[aiAssistantStore] templates table not available, using defaults');
+      }
+
+      // Meta credentials (WhatsApp + Instagram tokens)
+      const storedMetaCreds = await fetchSiteRow<MetaCredentials>('meta_credentials');
+      if (storedMetaCreds) {
+        set({ metaCredentials: storedMetaCreds });
       }
     })().catch((e) => console.error('[aiAssistantStore] Initial load error:', e));
 
@@ -345,6 +416,27 @@ export const useAIAssistantStore = create<AIAssistantState>()((set, get) => ({
       )
       .subscribe();
     channels.push(messagesChannel);
+
+    // 6. Realtime: templates (refetch on any change)
+    const templatesChannel = supabase
+      .channel('ai_templates:all')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ai_templates' },
+        async () => {
+          try {
+            const { data } = await supabase
+              .from('ai_templates')
+              .select('*')
+              .order('created_at', { ascending: true });
+            if (data && data.length > 0) set({ templates: data as AIReplyTemplate[] });
+          } catch (e) {
+            // ignore — table may not exist
+          }
+        }
+      )
+      .subscribe();
+    channels.push(templatesChannel);
 
     return () => {
       for (const ch of channels) {

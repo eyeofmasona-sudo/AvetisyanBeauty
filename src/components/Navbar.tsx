@@ -24,7 +24,6 @@ export function Navbar({ onBookClick }: { onBookClick?: () => void }) {
     { name: t("nav.services"), href: "#services" },
     { name: t("nav.results"), href: "#results" },
     { name: t("nav.specialists"), href: "#specialists" },
-    { name: t("nav.clinic"), href: "#trust" },
   ];
 
   const changeLang = (lang: string) => {

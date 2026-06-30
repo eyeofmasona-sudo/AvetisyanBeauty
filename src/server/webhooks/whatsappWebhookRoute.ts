@@ -2,23 +2,47 @@ import { Router } from 'express';
 import type { GoogleGenAI } from '@google/genai';
 import { verifyMetaSignature } from './metaSignatureVerification.js';
 import { processIncomingMessage } from '../messaging/processIncoming.js';
+import { getMetaAppSecret } from '../messaging/metaSend.js';
+import { supabaseAdmin } from '../lib/supabaseAdmin.js';
 
 export function createWhatsappWebhookRoute(deps: { getAi: () => GoogleGenAI }) {
   const router = Router();
 
-  router.get('/', (req, res) => {
+  /**
+   * Verify token can come from either env (WHATSAPP_VERIFY_TOKEN) or from
+   * Supabase (public.site / key=meta_credentials → whatsapp_verify_token).
+   * The admin panel writes to Supabase, so we read from there first.
+   */
+  async function getWhatsappVerifyToken(): Promise<string | undefined> {
+    try {
+      const { data } = await supabaseAdmin
+        .from('site')
+        .select('data')
+        .eq('key', 'meta_credentials')
+        .maybeSingle();
+      if (data?.data?.whatsapp_verify_token) {
+        return data.data.whatsapp_verify_token as string;
+      }
+    } catch (e) {
+      // ignore — fall back to env
+    }
+    return process.env.WHATSAPP_VERIFY_TOKEN;
+  }
+
+  router.get('/', async (req, res) => {
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
 
-    if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+    const expectedToken = await getWhatsappVerifyToken();
+    if (mode === 'subscribe' && expectedToken && token === expectedToken) {
       res.status(200).send(challenge);
     } else {
       res.sendStatus(403);
     }
   });
 
-  router.post('/', (req, res) => {
+  router.post('/', async (req, res) => {
     // Always acknowledge quickly; Meta retries aggressively on non-200 responses.
     res.status(200).send('EVENT_RECEIVED');
 
@@ -29,8 +53,9 @@ export function createWhatsappWebhookRoute(deps: { getAi: () => GoogleGenAI }) {
     const signature = req.headers['x-hub-signature-256'] as string;
     const rawBody = (req as any).rawBody;
 
-    if (rawBody && process.env.META_APP_SECRET) {
-      const isValid = verifyMetaSignature(rawBody, signature, process.env.META_APP_SECRET);
+    const appSecret = await getMetaAppSecret();
+    if (rawBody && appSecret) {
+      const isValid = verifyMetaSignature(rawBody, signature, appSecret);
       if (!isValid) {
         console.warn('Invalid Meta signature on WhatsApp Webhook');
         return;

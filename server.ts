@@ -730,7 +730,59 @@ export async function createApp() {
     }
   });
 
-  // 11. Update message status from the admin Inbox (mark as needs_human / ignored / etc).
+  // 12. AI Templates CRUD (admin-only). Stores canned responses for the AI to
+  // match incoming intents against. Kept in the public.ai_templates table.
+  app.post("/api/ai-messaging/templates", async (req, res) => {
+    try {
+      const item = req.body || {};
+      const now = Date.now();
+      const { data, error } = await supabaseAdmin
+        .from('ai_templates')
+        .insert({ ...item, created_at: now, updated_at: now })
+        .select('id')
+        .single();
+      if (error) throw error;
+      res.json({ id: data.id });
+    } catch (e: any) {
+      console.error('Add template error:', e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.patch("/api/ai-messaging/templates/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const patch = { ...req.body, updated_at: Date.now() };
+      delete patch.id;
+      delete patch.created_at;
+      const { error } = await supabaseAdmin
+        .from('ai_templates')
+        .update(patch)
+        .eq('id', id);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error('Update template error:', e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/ai-messaging/templates/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { error } = await supabaseAdmin
+        .from('ai_templates')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error('Delete template error:', e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // 13. Update message status from the admin Inbox (mark as needs_human / ignored / etc).
   app.patch("/api/ai-messaging/threads/:threadId/messages/:messageId/status", async (req, res) => {
     try {
       const { threadId, messageId } = req.params;
