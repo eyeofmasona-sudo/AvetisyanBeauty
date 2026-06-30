@@ -55,6 +55,52 @@ export function AdminPanel() {
   const [loginError, setLoginError] = useState('');
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
 
+  // Direct browser -> Firebase Storage upload using a backend-issued signed
+  // URL. This is a single network hop (no streaming the file through the
+  // backend), which is dramatically faster for large videos. The backend
+  // authorizes via the admin cookie, so this works for the username/password
+  // login too.
+  const uploadViaSignedUrl = async (file: File): Promise<string> => {
+    const res = await fetch('/api/upload/signed-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ mimetype: file.type }),
+    });
+    if (!res.ok) throw new Error('Could not get upload URL');
+    const { uploadUrl, downloadUrl, headers } = await res.json();
+    const putRes = await fetch(uploadUrl, { method: 'PUT', headers, body: file });
+    if (!putRes.ok) throw new Error('Direct upload failed');
+    return downloadUrl;
+  };
+
+  // Stream the file through the backend's multipart endpoint. Slower for large
+  // files (browser -> backend -> Storage) but works without signed-URL/CORS
+  // setup, so it's the fallback.
+  const uploadViaMultipart = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData
+    });
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+    const data = await response.json();
+    return data.url;
+  };
+
+  const uploadToBackend = async (file: File): Promise<string> => {
+    try {
+      return await uploadViaSignedUrl(file);
+    } catch (e) {
+      console.error('Direct signed-URL upload failed, falling back to backend stream:', e);
+      return uploadViaMultipart(file);
+    }
+  };
+
   const uploadFile = async (file: File): Promise<string> => {
     // Files are uploaded through the admin-only backend endpoint, which uses
     // the Supabase service role key to write to the public `uploads` bucket.
