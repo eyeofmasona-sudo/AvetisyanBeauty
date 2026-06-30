@@ -97,38 +97,24 @@ const normalizeServiceItems = (items: ServiceItem[]) =>
     };
   });
 
-const normalizeSpecialists = (content: LocalizedContent): LocalizedContent => {
-  const demoIds = new Set(["elena", "marcus", "sarah"]);
-  const specialistIds = new Set(realSpecialists.map(item => item.id));
-
-  const normalizeLang = (lang: keyof LocalizedContent) => {
-    const section = content[lang].specialists;
-    const hasDemoSpecialists = section.items.some(item => demoIds.has(item.id));
-    const hasRealSpecialists = section.items.some(item => specialistIds.has(item.id));
-    const normalizedServices = normalizeServiceItems(content[lang].services.items);
-
-    if (!hasDemoSpecialists && !hasRealSpecialists) {
-      return {
-        ...content[lang],
-        services: {
-          ...content[lang].services,
-          items: normalizedServices,
-        },
-      };
-    }
-
-    return {
-      ...content[lang],
-      services: {
-        ...content[lang].services,
-        items: normalizedServices,
-      },
-      specialists: {
-        ...section,
-        items: realSpecialists,
-      },
-    };
-  };
+/**
+ * Normalize content loaded from Supabase.
+ *
+ * IMPORTANT: We ONLY normalize service image URLs (to ensure each service
+ * card always has the right fallback image). We do NOT touch the specialists
+ * array — the admin's saved names, roles, specializations and uploaded photo
+ * URLs must be preserved verbatim. The previous implementation overwrote
+ * specialists with a hardcoded `realSpecialists` array on every load, which
+ * caused admin edits and photo uploads to silently disappear.
+ */
+const normalizeContent = (content: LocalizedContent): LocalizedContent => {
+  const normalizeLang = (lang: keyof LocalizedContent) => ({
+    ...content[lang],
+    services: {
+      ...content[lang].services,
+      items: normalizeServiceItems(content[lang].services.items),
+    },
+  });
 
   return {
     hy: normalizeLang("hy"),
@@ -285,7 +271,7 @@ export const loadContentFromDB = async () => {
 
     if (error) throw error;
     if (data?.data && Object.keys(data.data).length > 0) {
-      useContentStore.setState({ content: normalizeSpecialists(data.data as LocalizedContent) });
+      useContentStore.setState({ content: normalizeContent(data.data as LocalizedContent) });
     }
   } catch (e) {
     console.error("Failed to load content from DB", e);
