@@ -1,10 +1,9 @@
 import { Router } from 'express';
-import type { Firestore } from 'firebase-admin/firestore';
 import type { GoogleGenAI } from '@google/genai';
 import { verifyMetaSignature } from './metaSignatureVerification';
 import { processIncomingMessage } from '../messaging/processIncoming';
 
-export function createWhatsappWebhookRoute(deps: { db: Firestore; getAi: () => GoogleGenAI }) {
+export function createWhatsappWebhookRoute(deps: { getAi: () => GoogleGenAI }) {
   const router = Router();
 
   router.get('/', (req, res) => {
@@ -59,7 +58,7 @@ export function createWhatsappWebhookRoute(deps: { db: Firestore; getAi: () => G
             const contact = contacts.find((c: any) => c.wa_id === from);
             const customerName = contact?.profile?.name || from;
 
-            processIncomingMessage(deps.db, deps.getAi(), {
+            processIncomingMessage(deps.getAi(), {
               channel: 'whatsapp',
               external_thread_id: from,
               customer_name: customerName,

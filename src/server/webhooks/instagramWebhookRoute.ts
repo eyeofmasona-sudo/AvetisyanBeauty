@@ -1,10 +1,9 @@
 import { Router } from 'express';
-import type { Firestore } from 'firebase-admin/firestore';
 import type { GoogleGenAI } from '@google/genai';
 import { verifyMetaSignature } from './metaSignatureVerification';
 import { processIncomingMessage } from '../messaging/processIncoming';
 
-export function createInstagramWebhookRoute(deps: { db: Firestore; getAi: () => GoogleGenAI }) {
+export function createInstagramWebhookRoute(deps: { getAi: () => GoogleGenAI }) {
   const router = Router();
 
   router.get('/', (req, res) => {
@@ -53,7 +52,7 @@ export function createInstagramWebhookRoute(deps: { db: Firestore; getAi: () => 
           // Echoes of our own outbound sends are also delivered here; skip them.
           if (!text || !senderId || event?.message?.is_echo) continue;
 
-          processIncomingMessage(deps.db, deps.getAi(), {
+          processIncomingMessage(deps.getAi(), {
             channel: 'instagram',
             external_thread_id: senderId,
             customer_name: senderId,

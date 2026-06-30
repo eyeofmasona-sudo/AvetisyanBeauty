@@ -209,6 +209,17 @@ const resources = {
         "privacy": "Գաղտնիության քաղաքականություն",
         "terms": "Ծառայությունների պայմաններ"
       },
+      "contact": {
+        "badge": "Մեր հասցեն",
+        "title": "Ինչպես գտնել մեզ",
+        "subtitle": "Մենք գտնվում ենք Երևանի կենտրոնում՝ Ամիրյան 18 հասցեում։ Քարտեզի վրա սեղմեք՝ երթուղի կառուցելու համար։",
+        "addressLabel": "Հասցե",
+        "whatsappLabel": "WhatsApp",
+        "openInGoogle": "Google Maps",
+        "openInYandex": "Yandex Maps",
+        "openNative": "Բացել քարտեզի հավելվածում",
+        "mapTitle": "Կլինիկայի քարտեզ"
+      },
       "booking": {
         "title": "Գրանցվել խորհրդատվության",
         "step": "Քայլ {{current}} / {{total}}",
@@ -487,6 +498,17 @@ const resources = {
         "privacy": "Политика конфиденциальности",
         "terms": "Условия использования"
       },
+      "contact": {
+        "badge": "Наш адрес",
+        "title": "Как нас найти",
+        "subtitle": "Мы находимся в центре Еревана, ул. Амиряна 18. Нажмите на карту, чтобы построить маршрут.",
+        "addressLabel": "Адрес",
+        "whatsappLabel": "WhatsApp",
+        "openInGoogle": "Google Maps",
+        "openInYandex": "Яндекс.Карты",
+        "openNative": "Открыть в приложении карт",
+        "mapTitle": "Карта клиники"
+      },
       "booking": {
         "title": "Запись на прием",
         "step": "Шаг {{current}} из {{total}}",
@@ -764,6 +786,17 @@ const resources = {
         "rights": "© 2026 Avetisyan Beauty Clinic. All rights reserved.",
         "privacy": "Privacy Policy",
         "terms": "Terms of Service"
+      },
+      "contact": {
+        "badge": "Our Location",
+        "title": "How to Find Us",
+        "subtitle": "We are located in central Yerevan, 18 Amiryan St. Tap the map to get directions.",
+        "addressLabel": "Address",
+        "whatsappLabel": "WhatsApp",
+        "openInGoogle": "Google Maps",
+        "openInYandex": "Yandex Maps",
+        "openNative": "Open in maps app",
+        "mapTitle": "Clinic map"
       },
       "booking": {
         "title": "Book Appointment",

@@ -1,17 +1,6 @@
 import { create } from 'zustand';
-import { db } from '../lib/firebase';
-import {
-  collection,
-  doc,
-  onSnapshot,
-  setDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  orderBy,
-  Unsubscribe,
-} from 'firebase/firestore';
+import { supabase } from '../lib/supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export type AIStatus = 'new' | 'answered' | 'needs_human' | 'booked' | 'ignored';
 export type AIMode = 'draft_only' | 'approval_required' | 'auto_reply';
@@ -122,9 +111,30 @@ const defaultTemplates: AIReplyTemplate[] = [
   }
 ];
 
-// Per-thread message subcollection listeners, keyed by thread id, so we can
-// tear them down when the thread list changes or the module unmounts.
-let messageUnsubscribers: Record<string, Unsubscribe> = {};
+// Helper: read a single site row by key.
+async function fetchSiteRow<T>(key: string): Promise<T | null> {
+  const { data, error } = await supabase
+    .from('site')
+    .select('data')
+    .eq('key', key)
+    .maybeSingle();
+  if (error) {
+    console.error(`[aiAssistantStore] Error fetching site/${key}:`, error);
+    return null;
+  }
+  return (data?.data as T) ?? null;
+}
+
+// Helper: write settings through the admin-only API (server uses service role key).
+async function saveAISettings(settings: AIAssistantSettings) {
+  const res = await fetch('/api/db/site/ai_settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(settings),
+  });
+  if (!res.ok) throw new Error('Failed to save AI settings');
+}
 
 export const useAIAssistantStore = create<AIAssistantState>()((set, get) => ({
   settings: defaultSettings,
@@ -135,28 +145,45 @@ export const useAIAssistantStore = create<AIAssistantState>()((set, get) => ({
   updateSettings: async (newSettings) => {
     const settings = { ...get().settings, ...newSettings };
     set({ settings });
-    await setDoc(doc(db, 'site', 'ai_settings'), settings, { merge: true });
+    await saveAISettings(settings);
   },
 
   addKnowledgeItem: async (item) => {
-    const now = Date.now();
-    await addDoc(collection(db, 'ai_knowledge'), { ...item, created_at: now, updated_at: now });
+    const res = await fetch('/api/ai-messaging/knowledge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(item),
+    });
+    if (!res.ok) throw new Error('Failed to add knowledge item');
   },
 
   updateKnowledgeItem: async (id, item) => {
-    await updateDoc(doc(db, 'ai_knowledge', id), { ...item, updated_at: Date.now() });
+    const res = await fetch(`/api/ai-messaging/knowledge/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(item),
+    });
+    if (!res.ok) throw new Error('Failed to update knowledge item');
   },
 
   deleteKnowledgeItem: async (id) => {
-    await deleteDoc(doc(db, 'ai_knowledge', id));
+    const res = await fetch(`/api/ai-messaging/knowledge/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to delete knowledge item');
   },
 
   updateMessageStatus: async (threadId, messageId, status, requires_human) => {
-    await updateDoc(doc(db, 'ai_threads', threadId, 'messages', messageId), {
-      status,
-      ...(requires_human !== undefined ? { requires_human } : {}),
+    const res = await fetch(`/api/ai-messaging/threads/${threadId}/messages/${messageId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ status, requires_human }),
     });
-    await updateDoc(doc(db, 'ai_threads', threadId), { status });
+    if (!res.ok) throw new Error('Failed to update message status');
   },
 
   sendReply: async (threadId, messageId, finalReply) => {
@@ -189,64 +216,140 @@ export const useAIAssistantStore = create<AIAssistantState>()((set, get) => ({
   })),
 
   subscribeAIData: () => {
-    const unsubSettings = onSnapshot(doc(db, 'site', 'ai_settings'), (snap) => {
-      if (snap.exists()) {
-        set({ settings: { ...defaultSettings, ...(snap.data() as Partial<AIAssistantSettings>) } });
+    const channels: RealtimeChannel[] = [];
+    let threadsChannel: RealtimeChannel | null = null;
+
+    // 1. Initial load — settings + knowledge + threads (with messages).
+    (async () => {
+      // Settings
+      const storedSettings = await fetchSiteRow<Partial<AIAssistantSettings>>('ai_settings');
+      if (storedSettings) {
+        set({ settings: { ...defaultSettings, ...storedSettings } });
       }
-    });
 
-    const unsubKnowledge = onSnapshot(collection(db, 'ai_knowledge'), (snap) => {
-      const items = snap.docs.map((d) => ({ id: d.id, ...d.data() } as AIKnowledgeItem));
-      set({ knowledgeBase: items });
-    });
+      // Knowledge
+      const { data: kbData } = await supabase
+        .from('ai_knowledge')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (kbData) {
+        set({ knowledgeBase: kbData as AIKnowledgeItem[] });
+      }
 
-    const unsubThreads = onSnapshot(
-      query(collection(db, 'ai_threads'), orderBy('updated_at', 'desc')),
-      (snap) => {
-        const existingThreads = get().threads;
-        const threadsById = new Map(existingThreads.map((t) => [t.id, t]));
+      // Threads
+      const { data: threadsData } = await supabase
+        .from('ai_threads')
+        .select('*')
+        .order('updated_at', { ascending: false });
+      if (threadsData) {
+        const threads = threadsData as AIThread[];
+        // Fetch messages per thread in parallel
+        const threadsWithMessages = await Promise.all(
+          threads.map(async (t) => {
+            const { data: msgs } = await supabase
+              .from('ai_messages')
+              .select('*')
+              .eq('thread_id', t.id)
+              .order('created_at', { ascending: true });
+            return { ...t, messages: (msgs as AIMessage[]) || [] };
+          })
+        );
+        set({ threads: threadsWithMessages });
+      }
+    })().catch((e) => console.error('[aiAssistantStore] Initial load error:', e));
 
-        const seenIds = new Set<string>();
-        const nextThreads: AIThread[] = snap.docs.map((d) => {
-          seenIds.add(d.id);
-          const data = d.data() as Omit<AIThread, 'id' | 'messages'>;
-          const previous = threadsById.get(d.id);
-          return { id: d.id, ...data, messages: previous?.messages || [] };
-        });
-        set({ threads: nextThreads });
-
-        // Drop listeners for threads that no longer exist.
-        for (const id of Object.keys(messageUnsubscribers)) {
-          if (!seenIds.has(id)) {
-            messageUnsubscribers[id]();
-            delete messageUnsubscribers[id];
+    // 2. Realtime: settings (via site row updates)
+    const settingsChannel = supabase
+      .channel('site:ai_settings')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'site', filter: 'key=eq.ai_settings' },
+        async (payload) => {
+          const newRow = payload.new as { key: string; data: Partial<AIAssistantSettings> } | null;
+          if (newRow?.data) {
+            set({ settings: { ...defaultSettings, ...newRow.data } });
           }
         }
+      )
+      .subscribe();
+    channels.push(settingsChannel);
 
-        // Add listeners for newly-seen threads.
-        for (const threadId of seenIds) {
-          if (messageUnsubscribers[threadId]) continue;
-          messageUnsubscribers[threadId] = onSnapshot(
-            query(collection(db, 'ai_threads', threadId, 'messages'), orderBy('created_at', 'asc')),
-            (msgSnap) => {
-              const messages = msgSnap.docs.map((m) => ({ id: m.id, ...m.data() } as AIMessage));
-              set((state) => ({
-                threads: state.threads.map((t) => (t.id === threadId ? { ...t, messages } : t)),
-              }));
-            }
-          );
+    // 3. Realtime: knowledge base
+    const knowledgeChannel = supabase
+      .channel('ai_knowledge:all')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ai_knowledge' },
+        async () => {
+          // Refetch full collection (simplest correct approach for CRUD).
+          const { data } = await supabase
+            .from('ai_knowledge')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (data) set({ knowledgeBase: data as AIKnowledgeItem[] });
         }
-      }
-    );
+      )
+      .subscribe();
+    channels.push(knowledgeChannel);
+
+    // 4. Realtime: threads list
+    threadsChannel = supabase
+      .channel('ai_threads:all')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ai_threads' },
+        async () => {
+          const { data } = await supabase
+            .from('ai_threads')
+            .select('*')
+            .order('updated_at', { ascending: false });
+          if (!data) return;
+          const freshThreads = data as AIThread[];
+          // Preserve already-loaded messages for threads that still exist.
+          const prevById = new Map(get().threads.map((t) => [t.id, t]));
+          set({
+            threads: freshThreads.map((t) => ({
+              ...t,
+              messages: prevById.get(t.id)?.messages || [],
+            })),
+          });
+        }
+      )
+      .subscribe();
+    channels.push(threadsChannel);
+
+    // 5. Realtime: messages (one channel for all messages; we route by thread_id)
+    const messagesChannel = supabase
+      .channel('ai_messages:all')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ai_messages' },
+        async (payload) => {
+          const row = payload.new as AIMessage | null;
+          // On INSERT/UPDATE: refetch the affected thread's messages
+          if (row?.thread_id) {
+            const { data: msgs } = await supabase
+              .from('ai_messages')
+              .select('*')
+              .eq('thread_id', row.thread_id)
+              .order('created_at', { ascending: true });
+            set((state) => ({
+              threads: state.threads.map((t) =>
+                t.id === row.thread_id
+                  ? { ...t, messages: (msgs as AIMessage[]) || [] }
+                  : t
+              ),
+            }));
+          }
+        }
+      )
+      .subscribe();
+    channels.push(messagesChannel);
 
     return () => {
-      unsubSettings();
-      unsubKnowledge();
-      unsubThreads();
-      for (const id of Object.keys(messageUnsubscribers)) {
-        messageUnsubscribers[id]();
+      for (const ch of channels) {
+        supabase.removeChannel(ch);
       }
-      messageUnsubscribers = {};
     };
   },
 }));

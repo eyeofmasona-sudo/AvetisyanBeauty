@@ -16,8 +16,6 @@ import {
 import { AIPanel } from "../components/AIPanel";
 import { AIAssistantModule } from "../components/AIAssistantModule";
 import { instagramService } from "../services/instagramService";
-import { db, auth } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 
 export function AdminPanel() {
   const { t } = useTranslation();
@@ -104,62 +102,32 @@ export function AdminPanel() {
   };
 
   const uploadFile = async (file: File): Promise<string> => {
-    // The direct browser -> Firebase Storage upload only works when signed in
-    // with the bootstrapped Firebase (Gmail) account, since Storage rules are
-    // tied to that identity. The username/password admin login has no Firebase
-    // session, so attempting the direct upload there always uploads the whole
-    // file just to be rejected, then re-uploads via the backend — doubling the
-    // transfer. Only take the direct single-hop path when a Firebase session
-    // actually exists; otherwise go straight to the cookie-authenticated
-    // backend endpoint.
-    if (!auth.currentUser) {
-      return uploadToBackend(file);
+    // Files are uploaded through the admin-only backend endpoint, which uses
+    // the Supabase service role key to write to the public `uploads` bucket.
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData
+    });
+    if (!response.ok) {
+      throw new Error('Upload failed');
     }
-    try {
-      const { storage } = await import('../lib/firebase');
-      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-      const fileName = `uploads/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-      const storageRef = ref(storage, fileName);
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      return downloadURL;
-    } catch (e: any) {
-      console.error("Firebase upload error:", e);
-      // Fallback to the backend upload if the direct Storage write fails
-      // (e.g., missing bucket/permissions).
-      return uploadToBackend(file);
-    }
+    const data = await response.json();
+    return data.url;
   };
 
   useEffect(() => {
-    let firebaseChecked = false;
-    let cookieChecked = false;
-    const finishLoading = () => {
-      if (firebaseChecked && cookieChecked) setIsAuthLoading(false);
-    };
-
+    // Auth is purely cookie-based now (no Firebase Google popup). The server
+    // issues the `admin_token` JWT cookie on POST /api/auth/login.
     fetch('/api/auth/verify', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         if (data.authenticated) setIsAuthenticated(true);
       })
       .catch(() => {})
-      .finally(() => {
-        cookieChecked = true;
-        finishLoading();
-      });
-
-    let unsubscribe: (() => void) | undefined;
-    import('firebase/auth').then(({ onAuthStateChanged }) => {
-      unsubscribe = onAuthStateChanged(auth, (user) => {
-        if (user && user.email === 'eyeofmasona@gmail.com') {
-          setIsAuthenticated(true);
-        }
-        firebaseChecked = true;
-        finishLoading();
-      });
-    });
-    return () => unsubscribe?.();
+      .finally(() => setIsAuthLoading(false));
   }, []);
   const [formData, setFormData] = useState<Omit<GalleryCase, 'id'>>({
     protocol: "",
@@ -326,38 +294,10 @@ export function AdminPanel() {
     { id: "specialists", icon: Users, label: t("admin.specialists") },
   ];
 
-  const handleLogin = async (e?: React.FormEvent | React.MouseEvent) => {
-    if (e) e.preventDefault();
-    setLoginError('');
-    try {
-      const { signInWithPopup, GoogleAuthProvider, signOut } = await import('firebase/auth');
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      
-      if (result.user.email === 'eyeofmasona@gmail.com') {
-        const idToken = await result.user.getIdToken();
-        const res = await fetch('/api/auth/login-firebase', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken })
-        });
-        const data = await res.json();
-        if (data.success) {
-          setIsAuthenticated(true);
-        } else {
-          setLoginError('Backend auth failed: ' + data.error);
-          await signOut(auth);
-        }
-      } else {
-        setLoginError('Unauthorized email: ' + result.user.email);
-        const { signOut } = await import('firebase/auth');
-        await signOut(auth);
-      }
-    } catch (error: any) {
-      console.error("Login failed:", error);
-      setLoginError(error.message || 'Authentication failed');
-    }
-  };
+  // Google sign-in has been removed. The admin panel uses username/password
+  // only — see handleCredentialsLogin below. The email-allowlist gate
+  // ('eyeofmasona@gmail.com') is no longer applied since the credentials are
+  // verified server-side against ADMIN_USERNAME / ADMIN_PASSWORD env vars.
 
   const handleCredentialsLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -382,8 +322,6 @@ export function AdminPanel() {
 
   const handleLogout = async () => {
     try {
-      const { signOut } = await import('firebase/auth');
-      await signOut(auth);
       await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
       setIsAuthenticated(false);
     } catch (error) {
@@ -411,18 +349,6 @@ export function AdminPanel() {
           </div>
           <div className="space-y-6">
             {loginError && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">{loginError}</div>}
-            <button
-              onClick={handleLogin}
-              className="w-full bg-graphite text-white px-8 py-3.5 rounded-xl hover:bg-gold transition-colors font-medium text-sm tracking-wide mt-4"
-            >
-              Sign In with Google
-            </button>
-
-            <div className="flex items-center gap-3 text-graphite/30 text-xs uppercase tracking-widest">
-              <div className="flex-1 h-px bg-graphite/10" />
-              <span>{t("admin.or", "or")}</span>
-              <div className="flex-1 h-px bg-graphite/10" />
-            </div>
 
             <form onSubmit={handleCredentialsLogin} className="space-y-4">
               <div>

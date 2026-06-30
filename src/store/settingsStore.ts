@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { supabase } from '../lib/supabase';
 
 export interface SiteVideo {
   id: string;
@@ -48,13 +47,13 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
       settings: defaultSettings,
-      
+
       updateWhatsapp: async (number) => {
         const newSettings = { ...get().settings, whatsappNumber: number };
         set({ settings: newSettings });
         await get().saveToDB(newSettings);
       },
-      
+
       updateHeroVideoUrl: async (url, mobileUrl) => {
         const newSettings = { ...get().settings, heroVideoUrl: url };
         if (mobileUrl !== undefined) {
@@ -63,17 +62,17 @@ export const useSettingsStore = create<SettingsState>()(
         set({ settings: newSettings });
         await get().saveToDB(newSettings);
       },
-      
+
       addVideo: async (video) => {
         const currentVideos = get().settings?.videos || [];
-        const newSettings = { 
-          ...get().settings, 
+        const newSettings = {
+          ...get().settings,
           videos: [...currentVideos, video].sort((a, b) => a.order - b.order)
         };
         set({ settings: newSettings });
         await get().saveToDB(newSettings);
       },
-      
+
       updateVideo: async (id, videoData) => {
         const currentVideos = get().settings?.videos || [];
         const newSettings = {
@@ -83,7 +82,7 @@ export const useSettingsStore = create<SettingsState>()(
         set({ settings: newSettings });
         await get().saveToDB(newSettings);
       },
-      
+
       deleteVideo: async (id) => {
         const currentVideos = get().settings?.videos || [];
         const newSettings = {
@@ -93,18 +92,24 @@ export const useSettingsStore = create<SettingsState>()(
         set({ settings: newSettings });
         await get().saveToDB(newSettings);
       },
-      
+
       setVideos: async (videos) => {
         const newSettings = { ...get().settings, videos };
         set({ settings: newSettings });
         await get().saveToDB(newSettings);
       },
-      
+
       loadFromDB: async () => {
         try {
-          const docSnap = await getDoc(doc(db, 'site', 'settings'));
-          if (docSnap.exists()) {
-            const dbSettings = docSnap.data() as SiteSettings;
+          const { data, error } = await supabase
+            .from('site')
+            .select('data')
+            .eq('key', 'settings')
+            .maybeSingle();
+
+          if (error) throw error;
+          if (data?.data) {
+            const dbSettings = data.data as SiteSettings;
             if (dbSettings.heroVideoMobileUrl === LEGACY_MOBILE_URL) {
               delete dbSettings.heroVideoMobileUrl;
             }
@@ -114,14 +119,12 @@ export const useSettingsStore = create<SettingsState>()(
           console.error("Failed to load settings from DB", e);
         }
       },
-      
+
       saveToDB: async (settings) => {
         try {
           // Writes go through the admin-only backend endpoint (authenticated
-          // via the admin_token cookie) rather than directly to Firestore,
-          // since Firestore's security rules only allow writes from the
-          // bootstrapped Firebase user and the admin panel also supports a
-          // separate username/password login that has no Firebase session.
+          // via the admin_token cookie). The server uses the service role
+          // key to bypass RLS.
           const res = await fetch('/api/db/site/settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
