@@ -26,7 +26,7 @@ export function createWhatsappWebhookRoute(deps: { getAi: () => GoogleGenAI }) {
     } catch (e) {
       // ignore — fall back to env
     }
-    return process.env.WHATSAPP_VERIFY_TOKEN;
+    return process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN;
   }
 
   router.get('/', async (req, res) => {

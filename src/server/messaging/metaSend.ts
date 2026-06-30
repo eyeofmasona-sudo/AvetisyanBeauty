@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../lib/supabaseAdmin.js';
+import { decryptToken } from '../lib/crypto.js';
 
 const GRAPH_API_VERSION = 'v21.0';
 
@@ -53,12 +54,44 @@ async function getCred(key: keyof MetaCreds, envKey: string): Promise<string | u
 }
 
 export async function sendWhatsAppText(to: string, text: string): Promise<void> {
-  const phoneNumberId = await getCred('whatsapp_phone_number_id', 'WHATSAPP_PHONE_NUMBER_ID');
-  const accessToken = await getCred('whatsapp_access_token', 'WHATSAPP_ACCESS_TOKEN');
+  // Try the OAuth-stored WhatsApp integration first (provider='whatsapp').
+  // Falls back to env vars for backward compatibility with the manual setup.
+  let phoneNumberId: string | undefined;
+  let accessToken: string | undefined;
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('social_integrations')
+      .select('whatsapp_phone_number_id, access_token_encrypted, status, token_expires_at')
+      .eq('provider', 'whatsapp')
+      .eq('status', 'active')
+      .maybeSingle();
+    if (!error && data?.whatsapp_phone_number_id && data?.access_token_encrypted) {
+      // Check token expiry (60 days is the max for long-lived user tokens)
+      const expiresAt = data.token_expires_at ? new Date(data.token_expires_at) : null;
+      const isExpired = expiresAt ? expiresAt.getTime() < Date.now() : false;
+      if (!isExpired) {
+        const decrypted = decryptToken(data.access_token_encrypted);
+        if (decrypted) {
+          phoneNumberId = data.whatsapp_phone_number_id;
+          accessToken = decrypted;
+        }
+      }
+    }
+  } catch (e) {
+    // Fall through to env-var fallback
+  }
+
+  if (!phoneNumberId || !accessToken) {
+    phoneNumberId = await getCred('whatsapp_phone_number_id', 'WHATSAPP_PHONE_NUMBER_ID');
+    accessToken = await getCred('whatsapp_access_token', 'WHATSAPP_ACCESS_TOKEN');
+  }
+
   if (!phoneNumberId || !accessToken) {
     throw new MetaSendError(
-      'WhatsApp is not configured: missing whatsapp_phone_number_id or whatsapp_access_token. ' +
-      'Set them in the admin panel → AI Assistant → Settings → Connect WhatsApp & Instagram.'
+      'WhatsApp is not configured. Connect WhatsApp via the admin panel ' +
+      '(AI Assistant → Settings → WhatsApp Connection) or set WHATSAPP_PHONE_NUMBER_ID ' +
+      'and WHATSAPP_ACCESS_TOKEN in the Advanced / Manual Setup section.'
     );
   }
 

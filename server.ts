@@ -1229,6 +1229,440 @@ p.subtitle{color:rgba(245,245,245,0.6);text-align:center;margin:0 0 1.5rem;font-
     }[c]!));
   }
 
+  // ---------------------------------------------------------------------------
+  // Meta OAuth flow for WhatsApp Cloud API integration
+  // ---------------------------------------------------------------------------
+  // Endpoints:
+  //   GET  /api/meta/whatsapp/oauth/start       — initiates OAuth (redirects to FB)
+  //   GET  /api/meta/whatsapp/oauth/callback    — Meta redirects here with ?code=
+  //   POST /api/meta/whatsapp/oauth/select      — admin picks WABA + phone number
+  //   POST /api/meta/whatsapp/disconnect        — removes the integration
+  //   GET  /api/meta/whatsapp/status            — current integration status
+  //   POST /api/admin/whatsapp/send-test        — send a test message
+  //
+  // Stored in social_integrations with provider='whatsapp'. Tokens AES-256-GCM
+  // encrypted, never exposed to the browser.
+  // ---------------------------------------------------------------------------
+
+  const {
+    buildWhatsAppAuthUrl,
+    exchangeCodeForShortLivedToken: waExchangeShort,
+    inspectToken: waInspect,
+    exchangeForLongLivedToken: waExchangeLong,
+    fetchWhatsAppBusinessAccounts,
+    fetchPhoneNumbers,
+    subscribeAppToWaba,
+    sendWhatsAppTextMessage,
+    buildWhatsAppIntegrationRecord,
+    isWhatsAppOAuthConfigured,
+    WHATSAPP_REQUIRED_SCOPES,
+  } = await import('./src/server/meta/whatsappOauthFlow.js');
+
+  const WA_STATE_COOKIE = 'meta_wa_oauth_state';
+  const WA_PENDING_COOKIE = 'meta_wa_oauth_pending';
+
+  /**
+   * GET /api/meta/whatsapp/oauth/start
+   * Generates a CSRF state, stores it in an HTTP-only cookie, redirects to FB.
+   */
+  app.get("/api/meta/whatsapp/oauth/start", apiRateLimit, requireAdmin, (req, res) => {
+    if (!isWhatsAppOAuthConfigured()) {
+      return res.status(500).send(
+        renderOAuthErrorPage(
+          'Meta OAuth not configured',
+          'META_APP_ID, META_APP_SECRET, and META_WHATSAPP_REDIRECT_URI (or META_REDIRECT_URI) environment variables must be set on the server.'
+        )
+      );
+    }
+    const state = generateState();
+    res.cookie(WA_STATE_COOKIE, state, {
+      httpOnly: true, secure: true, sameSite: 'lax', maxAge: 10 * 60,
+    });
+    res.redirect(buildWhatsAppAuthUrl(state));
+  });
+
+  /**
+   * GET /api/meta/whatsapp/oauth/callback
+   * Meta redirects here with ?code=...&state=... after the user authorizes.
+   *
+   * Flow:
+   *   1. Verify state.
+   *   2. Exchange code → short-lived → long-lived.
+   *   3. Verify required scopes.
+   *   4. Fetch businesses + WABAs.
+   *   5. For each WABA, fetch phone numbers.
+   *   6. Flatten into a list of (WABA, phone) pairs.
+   *   7. If 0 pairs → error page.
+   *   8. If 1 pair → save integration + subscribe webhook, redirect to admin.
+   *   9. If >1 pairs → render HTML picker.
+   */
+  app.get("/api/meta/whatsapp/oauth/callback", async (req, res) => {
+    const { code, state } = req.query as { code?: string; state?: string };
+    const cookieState = req.cookies?.[WA_STATE_COOKIE];
+    res.clearCookie(WA_STATE_COOKIE);
+
+    if (!code || !state) {
+      return res.send(renderOAuthErrorPage('Authorization cancelled', 'No code or state was returned by Meta.'));
+    }
+    if (!cookieState || cookieState !== state) {
+      return res.send(renderOAuthErrorPage('Invalid state', 'CSRF state mismatch. Please try connecting again.'));
+    }
+
+    try {
+      const shortLived = await waExchangeShort(code);
+      const inspection = await waInspect(shortLived);
+      if (!inspection.isValid) {
+        return res.send(renderOAuthErrorPage('Invalid token', 'Meta returned an invalid access token.'));
+      }
+      const missingScopes = WHATSAPP_REQUIRED_SCOPES.filter((s) => !inspection.scopes.includes(s));
+      if (missingScopes.length > 0) {
+        return res.send(renderOAuthErrorPage(
+          'Missing required permissions',
+          `The following permissions were not granted: ${missingScopes.join(', ')}. Please reconnect and approve all requested permissions.`
+        ));
+      }
+      const longLived = await waExchangeLong(shortLived);
+      const { wabas } = await fetchWhatsAppBusinessAccounts(longLived.accessToken);
+      if (wabas.length === 0) {
+        return res.send(renderOAuthErrorPage(
+          'No WhatsApp Business Account found',
+          'Your Facebook account does not manage any WhatsApp Business Accounts. Create or be added to a WhatsApp Business Account, then try again.'
+        ));
+      }
+
+      // For each WABA, fetch phone numbers (in parallel).
+      const allPairs: Array<{
+        businessId: string;
+        businessName: string;
+        wabaId: string;
+        wabaName?: string;
+        phoneId: string;
+        displayPhone: string;
+        verifiedName: string;
+        quality?: string;
+        verified?: string;
+      }> = [];
+      await Promise.all(
+        wabas.map(async (entry) => {
+          try {
+            const phones = await fetchPhoneNumbers(entry.waba.id, longLived.accessToken);
+            for (const p of phones) {
+              allPairs.push({
+                businessId: entry.businessId,
+                businessName: entry.businessName,
+                wabaId: entry.waba.id,
+                wabaName: entry.waba.name,
+                phoneId: p.id,
+                displayPhone: p.display_phone_number,
+                verifiedName: p.verified_name,
+                quality: p.quality_rating,
+                verified: p.code_verification_status,
+              });
+            }
+          } catch (e: any) {
+            console.error(`[wa/oauth] Failed to fetch phones for WABA ${entry.waba.id}:`, e.message);
+          }
+        })
+      );
+
+      if (allPairs.length === 0) {
+        return res.send(renderOAuthErrorPage(
+          'No phone numbers found',
+          'Your WhatsApp Business Account does not have any phone numbers attached. Add a phone number in Meta Business Manager, then try again.'
+        ));
+      }
+
+      // Single option → save directly
+      if (allPairs.length === 1) {
+        const pair = allPairs[0];
+        await saveWhatsAppIntegration(pair, longLived.accessToken, inspection.scopes, encryptForOAuth);
+        return res.redirect('/hy/admin?wa_oauth=success');
+      }
+
+      // Multiple options → render picker
+      const pendingPayload = JSON.stringify({
+        token: encryptForOAuth(longLived.accessToken),
+        expiresAt: longLived.expiresAt.toISOString(),
+        scopes: inspection.scopes,
+        pairs: allPairs.map((p) => ({
+          businessId: p.businessId,
+          businessName: p.businessName,
+          wabaId: p.wabaId,
+          wabaName: p.wabaName,
+          phoneId: p.phoneId,
+          displayPhone: p.displayPhone,
+          verifiedName: p.verifiedName,
+        })),
+      });
+      res.cookie(WA_PENDING_COOKIE, pendingPayload, {
+        httpOnly: true, secure: true, sameSite: 'lax', maxAge: 5 * 60,
+      });
+      return res.send(renderWhatsAppPicker(allPairs));
+    } catch (e: any) {
+      console.error('[wa/oauth] callback error:', e.message);
+      return res.send(renderOAuthErrorPage('WhatsApp OAuth failed', e.message || String(e)));
+    }
+  });
+
+  /**
+   * POST /api/meta/whatsapp/oauth/select
+   * Body: { wabaId, phoneId }
+   *
+   * Uses the pending OAuth cookie to look up the chosen WABA + phone number,
+   * saves the integration, and subscribes the app to receive webhooks.
+   */
+  app.post("/api/meta/whatsapp/oauth/select", apiRateLimit, requireAdmin, async (req, res) => {
+    const { wabaId, phoneId } = req.body || {};
+    if (!wabaId || !phoneId) {
+      return res.status(400).json({ error: 'wabaId and phoneId are required' });
+    }
+
+    const pendingCookie = req.cookies?.[WA_PENDING_COOKIE];
+    res.clearCookie(WA_PENDING_COOKIE);
+    if (!pendingCookie) {
+      return res.status(400).json({ error: 'Pending OAuth session expired. Please reconnect.' });
+    }
+
+    try {
+      const pending = JSON.parse(pendingCookie);
+      const userToken = decryptForOAuth(pending.token);
+      if (!userToken) {
+        return res.status(400).json({ error: 'Failed to decrypt pending token. Please reconnect.' });
+      }
+
+      const pair = (pending.pairs || []).find((p: any) => p.wabaId === wabaId && p.phoneId === phoneId);
+      if (!pair) {
+        return res.status(400).json({ error: 'Selected WABA/phone no longer available. Please reconnect.' });
+      }
+
+      await saveWhatsAppIntegration(pair, userToken, pending.scopes || [], encryptForOAuth);
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error('[wa/oauth] select error:', e.message);
+      res.status(500).json({ error: e.message || 'Failed to save integration' });
+    }
+  });
+
+  /**
+   * POST /api/meta/whatsapp/disconnect
+   * Soft-deletes the active WhatsApp integration, scrubs tokens.
+   */
+  app.post("/api/meta/whatsapp/disconnect", apiRateLimit, requireAdmin, async (req, res) => {
+    try {
+      const { error } = await supabaseAdmin
+        .from('social_integrations')
+        .update({
+          status: 'disconnected',
+          access_token_encrypted: '',
+          last_error: 'Disconnected by admin on ' + new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('provider', 'whatsapp')
+        .eq('status', 'active');
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error('[wa/oauth] disconnect error:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  /**
+   * GET /api/meta/whatsapp/status
+   * Returns the current WhatsApp integration status. NEVER includes the token.
+   */
+  app.get("/api/meta/whatsapp/status", apiRateLimit, requireAdmin, async (req, res) => {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('social_integrations')
+        .select('id, meta_business_id, whatsapp_business_account_id, whatsapp_phone_number_id, display_phone_number, verified_name, token_type, token_expires_at, granted_scopes, webhook_status, status, last_message_at, last_sync_at, last_error, created_at')
+        .eq('provider', 'whatsapp')
+        .eq('status', 'active')
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        return res.json({ connected: false, oauth_configured: isWhatsAppOAuthConfigured() });
+      }
+      const now = new Date();
+      const expiresAt = data.token_expires_at ? new Date(data.token_expires_at) : null;
+      const isExpired = expiresAt ? expiresAt.getTime() < now.getTime() : false;
+      res.json({
+        connected: true,
+        oauth_configured: isWhatsAppOAuthConfigured(),
+        integration: {
+          id: data.id,
+          meta_business_id: data.meta_business_id,
+          whatsapp_business_account_id: data.whatsapp_business_account_id,
+          whatsapp_phone_number_id: data.whatsapp_phone_number_id,
+          display_phone_number: data.display_phone_number,
+          verified_name: data.verified_name,
+          token_type: data.token_type,
+          token_expires_at: data.token_expires_at,
+          granted_scopes: data.granted_scopes,
+          webhook_status: data.webhook_status || 'not_configured',
+          last_message_at: data.last_message_at,
+          last_sync_at: data.last_sync_at,
+          last_error: data.last_error,
+          created_at: data.created_at,
+          is_expired: isExpired,
+        },
+      });
+    } catch (e: any) {
+      console.error('[wa/oauth] status error:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  /**
+   * POST /api/admin/whatsapp/send-test
+   * Body: { to: "+37433101077", message: "Hello from Avetisyan Beauty Clinic!" }
+   *
+   * Sends a test message via WhatsApp Cloud API using the stored (encrypted)
+   * access token. Useful for verifying the integration works end-to-end.
+   */
+  app.post("/api/admin/whatsapp/send-test", apiRateLimit, requireAdmin, async (req, res) => {
+    try {
+      const { to, message } = req.body || {};
+      if (!to || !message) {
+        return res.status(400).json({ error: 'to and message are required' });
+      }
+      // Normalize phone: strip spaces, +, dashes. WhatsApp wants digits only.
+      const normalizedTo = String(to).replace(/[^\d]/g, '');
+
+      const { data: integration, error } = await supabaseAdmin
+        .from('social_integrations')
+        .select('id, whatsapp_phone_number_id, access_token_encrypted')
+        .eq('provider', 'whatsapp')
+        .eq('status', 'active')
+        .maybeSingle();
+      if (error) throw error;
+      if (!integration || !integration.whatsapp_phone_number_id) {
+        return res.status(400).json({ error: 'No active WhatsApp integration found.' });
+      }
+      const accessToken = decryptForOAuth(integration.access_token_encrypted);
+      if (!accessToken) {
+        return res.status(500).json({ error: 'Failed to decrypt stored access token. Please reconnect.' });
+      }
+      const messageId = await sendWhatsAppTextMessage(
+        integration.whatsapp_phone_number_id,
+        accessToken,
+        normalizedTo,
+        message
+      );
+      // Update last_message_at
+      await supabaseAdmin
+        .from('social_integrations')
+        .update({ last_message_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', integration.id);
+      res.json({ success: true, messageId });
+    } catch (e: any) {
+      console.error('[wa/send-test] error:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  /** Helper: save WhatsApp integration + subscribe webhook. */
+  async function saveWhatsAppIntegration(
+    pair: any,
+    userToken: string,
+    scopes: string[],
+    encryptFn: (s: string) => string
+  ): Promise<void> {
+    // Mark any existing active integration as disconnected
+    await supabaseAdmin
+      .from('social_integrations')
+      .update({ status: 'disconnected', updated_at: new Date().toISOString() })
+      .eq('provider', 'whatsapp')
+      .eq('status', 'active');
+
+    const expiresIn = 60 * 24 * 60 * 60;
+    const expiresAt = new Date(Date.now() + expiresIn * 1000);
+
+    // Insert integration record
+    const { data: inserted, error: insErr } = await supabaseAdmin
+      .from('social_integrations')
+      .insert({
+        provider: 'whatsapp',
+        meta_business_id: pair.businessId,
+        whatsapp_business_account_id: pair.wabaId,
+        whatsapp_phone_number_id: pair.phoneId,
+        display_phone_number: pair.displayPhone,
+        verified_name: pair.verifiedName,
+        access_token_encrypted: encryptFn(userToken),
+        token_type: 'long_lived',
+        token_expires_at: expiresAt.toISOString(),
+        granted_scopes: scopes,
+        webhook_status: 'pending',
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+    if (insErr) throw new Error(`Failed to save WhatsApp integration: ${insErr.message}`);
+
+    // Try to subscribe the app to WABA + phone number webhooks.
+    // If this fails, the integration is still saved but webhook_status stays 'pending'
+    // so the admin UI shows a warning.
+    try {
+      const sub = await subscribeAppToWaba(pair.wabaId, pair.phoneId, userToken);
+      let newStatus = 'not_configured';
+      if (sub.wabaSubscribed && sub.phoneSubscribed) newStatus = 'subscribed';
+      else if (sub.wabaSubscribed || sub.phoneSubscribed) newStatus = 'partial';
+      await supabaseAdmin
+        .from('social_integrations')
+        .update({
+          webhook_status: newStatus,
+          last_error: sub.errors.length > 0 ? sub.errors.join('; ').slice(0, 500) : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', inserted.id);
+    } catch (e: any) {
+      console.error('[wa/oauth] webhook subscribe failed:', e.message);
+      await supabaseAdmin
+        .from('social_integrations')
+        .update({
+          webhook_status: 'failed',
+          last_error: `Webhook subscribe failed: ${e.message}`.slice(0, 500),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', inserted.id);
+    }
+  }
+
+  /** Helper: render the multi-WABA/phone picker as a standalone HTML page. */
+  function renderWhatsAppPicker(
+    pairs: Array<{
+      businessName: string;
+      wabaName?: string;
+      displayPhone: string;
+      verifiedName: string;
+      wabaId: string;
+      phoneId: string;
+    }>
+  ): string {
+    const items = pairs.map((p) => `
+      <form method="POST" action="/api/meta/whatsapp/oauth/select" style="margin:0;">
+        <input type="hidden" name="wabaId" value="${escapeHtml(p.wabaId)}" />
+        <input type="hidden" name="phoneId" value="${escapeHtml(p.phoneId)}" />
+        <button type="submit" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:#111;border:1px solid rgba(200,155,78,0.25);border-radius:16px;padding:1rem 1.25rem;color:#F5F5F5;cursor:pointer;text-align:left;font-size:0.95rem;margin-bottom:0.5rem;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#C89B4E'" onmouseout="this.style.borderColor='rgba(200,155,78,0.25)'">
+          <span>
+            <strong>${escapeHtml(p.verifiedName)}</strong>
+            <span style="color:#C89B4E;font-size:0.85rem;margin-left:0.5rem;">${escapeHtml(p.displayPhone)}</span>
+            <br/>
+            <span style="color:rgba(245,245,245,0.5);font-size:0.75rem;">${escapeHtml(p.businessName)} · ${escapeHtml(p.wabaName || p.wabaId)}</span>
+          </span>
+          <span style="color:#C89B4E;">Select →</span>
+        </button>
+      </form>`).join('');
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Select WhatsApp Number</title>
+<style>body{background:#080808;color:#F5F5F5;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:1rem;}
+.box{max-width:560px;width:100%;background:#111;border:1px solid rgba(200,155,78,0.35);border-radius:24px;padding:2.5rem;}
+h1{color:#C89B4E;font-size:1.5rem;margin:0 0 0.5rem;font-family:Georgia,serif;text-align:center;}
+p.subtitle{color:rgba(245,245,245,0.6);text-align:center;margin:0 0 1.5rem;font-size:0.9rem;}
+</style></head><body><div class="box"><h1>Select a WhatsApp Number</h1><p class="subtitle">Choose the phone number to use for sending and receiving messages.</p>${items}</div></body></html>`;
+  }
+
   // Setup File Uploads with Multer (fallback for any legacy local uploads)
   const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
   // In serverless environments (Vercel Lambda), the working directory is

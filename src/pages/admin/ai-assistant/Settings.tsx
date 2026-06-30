@@ -2,21 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { useAIAssistantStore } from '../../../store/aiAssistantStore';
 import { MessageCircle, Instagram, ExternalLink, Copy, Check, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { InstagramOAuthSection } from './InstagramOAuthSection';
+import { WhatsAppOAuthSection } from './WhatsAppOAuthSection';
 
 export function Settings() {
   const { settings, updateSettings, metaCredentials, saveMetaCredentials } = useAIAssistantStore();
 
   return (
     <div className="space-y-10">
-      {/* 1. Instagram via Meta OAuth (recommended) */}
+      {/* 1. WhatsApp via Meta OAuth (recommended) */}
       <section>
+        <h3 className="font-display text-xl text-graphite border-b border-graphite/10 pb-4 mb-6">
+          WhatsApp Connection
+        </h3>
+        <WhatsAppOAuthSection />
+      </section>
+
+      {/* 2. Instagram via Meta OAuth (recommended) */}
+      <section className="border-t border-graphite/10 pt-8">
         <h3 className="font-display text-xl text-graphite border-b border-graphite/10 pb-4 mb-6">
           Instagram Connection
         </h3>
         <InstagramOAuthSection />
       </section>
 
-      {/* 2. WhatsApp & manual Instagram credentials (advanced) */}
+      {/* 3. Manual credentials (advanced) */}
       <section className="border-t border-graphite/10 pt-8">
         <details className="group">
           <summary className="cursor-pointer flex items-center justify-between mb-4 list-none">
@@ -27,8 +36,8 @@ export function Settings() {
                 Advanced / Manual Setup
               </h3>
               <p className="text-xs text-graphite/60 mt-1 ml-[26px]">
-                For WhatsApp and for Instagram without OAuth. Most users should use the one-click
-                OAuth section above instead.
+                For environments without OAuth configured. Most users should use the one-click
+                OAuth sections above instead.
               </p>
             </div>
           </summary>
@@ -42,7 +51,7 @@ export function Settings() {
         </details>
       </section>
 
-      {/* 3. General AI assistant behavior */}
+      {/* 4. General AI assistant behavior */}
       <section className="border-t border-graphite/10 pt-8">
         <h3 className="font-display text-xl text-graphite border-b border-graphite/10 pb-4 mb-6">
           General Settings
