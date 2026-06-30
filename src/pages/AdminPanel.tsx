@@ -55,9 +55,40 @@ export function AdminPanel() {
   const [loginError, setLoginError] = useState('');
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
 
-  // Files are uploaded through the admin-only backend endpoint, which uses
-  // the Supabase service role key to write to the public `uploads` bucket.
-  const uploadFile = async (file: File): Promise<string> => {
+  // Direct browser → Supabase Storage upload using a backend-minted signed
+  // upload URL. Single network hop (no streaming through the Vercel Lambda),
+  // which bypasses Vercel's 4.5 MB request body limit and is dramatically
+  // faster for large videos. The backend authorizes via the admin cookie.
+  const uploadViaSignedUrl = async (file: File): Promise<string> => {
+    const res = await fetch('/api/upload/signed-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ mimetype: file.type, filename: file.name }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Could not get upload URL');
+    }
+    const { path, token, publicUrl } = await res.json();
+
+    // Use the browser-side Supabase client (anon key) to push the file bytes
+    // directly to Supabase Storage via the signed URL.
+    const { supabase } = await import('../lib/supabase');
+    const { error: upErr } = await supabase.storage
+      .from('uploads')
+      .uploadToSignedUrl(path, token, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+    if (upErr) throw upErr;
+    return publicUrl;
+  };
+
+  // Stream the file through the backend's multipart endpoint. Slower for
+  // large files (browser → Lambda → Storage) and capped at 4.5 MB by Vercel,
+  // so it's only the fallback.
+  const uploadViaMultipart = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
     const response = await fetch('/api/upload', {
@@ -70,6 +101,18 @@ export function AdminPanel() {
     }
     const data = await response.json();
     return data.url;
+  };
+
+  // Upload a file: prefer the fast direct-to-Supabase path, fall back to the
+  // slow multipart path if signed URL minting fails (e.g. clock skew, network
+  // glitch, or running locally without the supabase client configured).
+  const uploadFile = async (file: File): Promise<string> => {
+    try {
+      return await uploadViaSignedUrl(file);
+    } catch (e) {
+      console.error('Signed URL upload failed, falling back to multipart:', e);
+      return uploadViaMultipart(file);
+    }
   };
 
   useEffect(() => {

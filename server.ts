@@ -856,6 +856,56 @@ export async function createApp() {
     });
   });
 
+  // Issue a short-lived signed upload URL for direct browser → Supabase Storage
+  // uploads. This bypasses Vercel's 4.5 MB request body limit on serverless
+  // functions and avoids the double-hop (browser → Lambda → Storage), so large
+  // video uploads finish much faster.
+  //
+  // Flow:
+  //   1. Admin client calls this endpoint with the file's MIME type.
+  //   2. Server uses the service role key to mint a one-time signed upload URL
+  //      for a fresh path in the `uploads` bucket.
+  //   3. Client receives { path, token, publicUrl }.
+  //   4. Client uses supabase-js's uploadToSignedUrl(path, token, file) to
+  //      upload the file bytes directly to Supabase Storage.
+  //   5. Client uses the returned publicUrl on the site.
+  app.post("/api/upload/signed-url", apiRateLimit, requireAdmin, async (req, res) => {
+    try {
+      const { mimetype, filename } = req.body || {};
+      const ext = ALLOWED_UPLOAD_TYPES[mimetype];
+      if (!ext) {
+        return res.status(400).json({ error: "Unsupported file type" });
+      }
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const safeName = (filename || 'file')
+        .replace(/[^a-zA-Z0-9.]/g, '_')
+        .slice(0, 50);
+      const objectPath = `uploads/${safeName}-${uniqueSuffix}${ext}`;
+
+      const { data: signedData, error: signedErr } = await supabaseAdmin
+        .storage
+        .from('uploads')
+        .createSignedUploadUrl(objectPath);
+
+      if (signedErr) throw signedErr;
+
+      const { data: pubUrl } = supabaseAdmin
+        .storage
+        .from('uploads')
+        .getPublicUrl(objectPath);
+
+      res.json({
+        path: signedData.path,
+        token: signedData.token,
+        signedUrl: signedData.signedUrl,
+        publicUrl: pubUrl.publicUrl,
+      });
+    } catch (e: any) {
+      console.error("Signed URL error:", e);
+      res.status(500).json({ error: "Failed to create upload URL", details: e.message });
+    }
+  });
+
   app.delete("/api/upload", apiRateLimit, requireAdmin, async (req, res) => {
     try {
       const { url } = req.body;
