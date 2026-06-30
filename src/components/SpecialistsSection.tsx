@@ -74,14 +74,14 @@ export function SpecialistsSection() {
                     <h4 className="font-display text-2xl md:text-3xl text-white font-medium mb-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] line-clamp-2">
                       {spec.name}
                     </h4>
-                    <p className="text-white/80 text-xs md:text-sm tracking-widest uppercase font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] line-clamp-1">
+                    <p className="text-white/80 text-xs md:text-sm tracking-widest uppercase font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] line-clamp-2">
                       {spec.role}
                     </p>
                   </div>
                 </div>
 
-                <div className="text-center px-2">
-                  <p className="text-gold font-medium text-sm md:text-lg tracking-wide uppercase line-clamp-1">{spec.spec}</p>
+                <div className="text-center px-2 min-h-[3em] flex items-center justify-center">
+                  <p className="text-gold font-medium text-sm md:text-base tracking-wide normal-case break-words leading-snug">{spec.spec}</p>
                 </div>
               </motion.div>
             );
