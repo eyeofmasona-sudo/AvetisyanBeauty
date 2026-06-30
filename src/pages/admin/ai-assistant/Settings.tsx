@@ -1,19 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { useAIAssistantStore } from '../../../store/aiAssistantStore';
 import { MessageCircle, Instagram, ExternalLink, Copy, Check, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { InstagramOAuthSection } from './InstagramOAuthSection';
 
 export function Settings() {
   const { settings, updateSettings, metaCredentials, saveMetaCredentials } = useAIAssistantStore();
 
   return (
     <div className="space-y-10">
-      {/* Connect WhatsApp & Instagram */}
-      <MetaCredentialsSection
-        metaCredentials={metaCredentials}
-        onSave={saveMetaCredentials}
-      />
+      {/* 1. Instagram via Meta OAuth (recommended) */}
+      <section>
+        <h3 className="font-display text-xl text-graphite border-b border-graphite/10 pb-4 mb-6">
+          Instagram Connection
+        </h3>
+        <InstagramOAuthSection />
+      </section>
 
-      <div className="border-t border-graphite/10 pt-8">
+      {/* 2. WhatsApp & manual Instagram credentials (advanced) */}
+      <section className="border-t border-graphite/10 pt-8">
+        <details className="group">
+          <summary className="cursor-pointer flex items-center justify-between mb-4 list-none">
+            <div>
+              <h3 className="font-display text-xl text-graphite flex items-center gap-2">
+                <ChevronDown size={18} className="text-gold group-open:hidden" />
+                <ChevronUp size={18} className="text-gold hidden group-open:inline" />
+                Advanced / Manual Setup
+              </h3>
+              <p className="text-xs text-graphite/60 mt-1 ml-[26px]">
+                For WhatsApp and for Instagram without OAuth. Most users should use the one-click
+                OAuth section above instead.
+              </p>
+            </div>
+          </summary>
+
+          <div className="pt-4">
+            <MetaCredentialsSection
+              metaCredentials={metaCredentials}
+              onSave={saveMetaCredentials}
+            />
+          </div>
+        </details>
+      </section>
+
+      {/* 3. General AI assistant behavior */}
+      <section className="border-t border-graphite/10 pt-8">
         <h3 className="font-display text-xl text-graphite border-b border-graphite/10 pb-4 mb-6">
           General Settings
         </h3>
@@ -86,7 +116,7 @@ export function Settings() {
             </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
