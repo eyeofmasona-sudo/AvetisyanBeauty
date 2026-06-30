@@ -1545,21 +1545,6 @@ export function AdminPanel() {
 
 
 
-
-
-            {activeTab !== "dashboard" && activeTab !== "content" && activeTab !== "services" && activeTab !== "specialists" && activeTab !== "beforeAfter" && activeTab !== "ai" && activeTab !== "ai_assistant" && activeTab !== "ai_marketing" && activeTab !== "instagram" && (
-              <div className="flex flex-col items-center justify-center h-[60vh] bg-white rounded-[2rem] border border-graphite/5 shadow-sm p-8 text-center">
-                <div className="w-16 h-16 rounded-full bg-pearl flex items-center justify-center mb-4 text-graphite/30">
-                  {React.createElement(menuItems.find(m => m.id === activeTab)?.icon || LayoutDashboard, { size: 32 })}
-                </div>
-                <h2 className="font-display text-2xl text-graphite mb-2">
-                  {menuItems.find(m => m.id === activeTab)?.label}
-                </h2>
-                <p className="text-graphite/50 font-light max-w-md">
-                  {t("admin.underConstruction")}
-                </p>
-              </div>
-            )}
           </div>
         </div>
       </main>
