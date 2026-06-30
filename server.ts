@@ -761,8 +761,16 @@ export async function createApp() {
 
   // Setup File Uploads with Multer (fallback for any legacy local uploads)
   const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+  // In serverless environments (Vercel Lambda), the working directory is
+  // read-only. mkdir would throw ENOENT — ignore. The local-uploads fallback
+  // only applies in dev/standalone mode anyway; in production, all uploads
+  // go directly to Supabase Storage.
+  try {
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+  } catch (e) {
+    // Read-only filesystem — skip silently.
   }
 
   // Generic site document write (replaces Firestore `site/{docId}.set(..., {merge:true})`).
