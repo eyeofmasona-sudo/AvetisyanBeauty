@@ -5,15 +5,7 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://golden-sun-aesthetic-center-693240846482.europe-west2.run.app/api/:path*"
-    },
-    {
-      "source": "/uploads/:path*",
-      "destination": "https://golden-sun-aesthetic-center-693240846482.europe-west2.run.app/uploads/:path*"
-    },
-    {
-      "source": "/((?!assets/|videos/|images/|favicon|manifest|robots|sitemap|og-image).*)",
+      "source": "/((?!api/|assets/|videos/|images/|favicon|manifest|robots|sitemap|og-image).*)",
       "destination": "/index.html"
     }
   ]
