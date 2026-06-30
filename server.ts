@@ -5,27 +5,13 @@ import crypto from "crypto";
 import multer from "multer";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
-import { getStorage } from 'firebase-admin/storage';
-
-// Initialize Firebase Admin
-let firebaseAdminApp;
-if (!getApps().length) {
-  firebaseAdminApp = initializeApp({
-    projectId: process.env.FIREBASE_PROJECT_ID || 'gen-lang-client-0533202242'
-  });
-} else {
-  firebaseAdminApp = getApps()[0];
-}
-const db = getFirestore(firebaseAdminApp, "ai-studio-goldensunaesthet-06980057-72a8-4947-ad91-dd805dfcbaa5");
+import { supabaseAdmin } from "./src/server/lib/supabaseAdmin";
 
 function encodeWAV(pcmBuffer: Buffer, sampleRate: number, numChannels: number, bitsPerSample: number): Buffer {
   const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
   const blockAlign = numChannels * (bitsPerSample / 8);
   const buffer = Buffer.alloc(44 + pcmBuffer.length);
-  
+
   buffer.write('RIFF', 0);
   buffer.writeUInt32LE(36 + pcmBuffer.length, 4);
   buffer.write('WAVE', 8);
@@ -39,7 +25,7 @@ function encodeWAV(pcmBuffer: Buffer, sampleRate: number, numChannels: number, b
   buffer.writeUInt16LE(bitsPerSample, 34);
   buffer.write('data', 36);
   buffer.writeUInt32LE(pcmBuffer.length, 40);
-  
+
   pcmBuffer.copy(buffer, 44);
   return buffer;
 }
@@ -52,7 +38,7 @@ import jwt from "jsonwebtoken";
 import { createInstagramWebhookRoute } from "./src/server/webhooks/instagramWebhookRoute";
 import { createWhatsappWebhookRoute } from "./src/server/webhooks/whatsappWebhookRoute";
 import { sendInstagramText, sendWhatsAppText, MetaSendError } from "./src/server/messaging/metaSend";
-import { markMessageAnswered } from "./src/server/messaging/threadStore";
+import { markMessageAnswered, getThread } from "./src/server/messaging/threadStore";
 
 dotenv.config();
 
@@ -220,7 +206,7 @@ async function startServer() {
   app.use(cookieParser());
 
   // Use large body parser for images/base64, and save rawBody for signature verification
-  app.use(express.json({ 
+  app.use(express.json({
     limit: "50mb",
     verify: (req: any, res, buf) => {
       req.rawBody = buf.toString();
@@ -243,22 +229,8 @@ async function startServer() {
   };
 
   // --- Admin Auth Endpoints ---
-  app.post("/api/auth/login-firebase", authRateLimit, async (req, res) => {
-    try {
-      const { idToken } = req.body;
-      const decodedToken = await getAuth(firebaseAdminApp).verifyIdToken(idToken);
-      if (decodedToken.email === 'eyeofmasona@gmail.com' && decodedToken.email_verified) {
-        const token = jwt.sign({ username: decodedToken.email }, JWT_SECRET, { expiresIn: '12h' });
-        res.cookie('admin_token', token, { httpOnly: true, secure: true, sameSite: 'none', maxAge: 12 * 60 * 60 * 1000 });
-        res.json({ success: true });
-      } else {
-        res.status(401).json({ error: "Unauthorized email" });
-      }
-    } catch (error) {
-      console.error("Firebase auth error:", error);
-      res.status(401).json({ error: "Invalid token" });
-    }
-  });
+  // NOTE: /api/auth/login-firebase has been removed — the admin panel now
+  // uses username/password only. See AdminPanel.tsx.
 
   app.post("/api/auth/login", authRateLimit, (req, res) => {
     const { username, password } = req.body;
@@ -309,9 +281,9 @@ async function startServer() {
     try {
       const { prompt, systemInstruction, model = "gemini-3.5-flash", isMagic = false } = req.body;
       const ai = getAi();
-      
+
       const targetModel = isMagic ? "gemini-3.1-pro-preview" : model;
-      
+
       const response = await ai.models.generateContent({
         model: targetModel,
         contents: prompt,
@@ -329,9 +301,9 @@ async function startServer() {
     try {
       const { prompt, negativePrompt, aspectRatio = "1:1", imageSize = "1K", numImages = 1 } = req.body;
       const ai = getAi();
-      
+
       const fullPrompt = negativePrompt ? `${prompt} \n\nDO NOT INCLUDE: ${negativePrompt}` : prompt;
-      
+
       const interaction = await ai.interactions.create({
         model: "gemini-3.1-flash-image",
         input: fullPrompt,
@@ -374,13 +346,13 @@ async function startServer() {
     try {
       const { prompt, firstFrame, lastFrame, aspectRatio = "16:9", resolution = "1080p", quality = "lite" } = req.body;
       const ai = getAi();
-      
+
       const config: any = {
         numberOfVideos: 1,
         resolution,
         aspectRatio,
       };
-      
+
       if (lastFrame) {
         config.lastFrame = {
           imageBytes: lastFrame.split(",")[1],
@@ -395,7 +367,7 @@ async function startServer() {
           mimeType: "image/jpeg",
         };
       }
-      
+
       const targetModel = quality === "high" ? "veo-3.1-generate-preview" : "veo-3.1-lite-generate-preview";
 
       const operation = await ai.models.generateVideos({
@@ -404,7 +376,7 @@ async function startServer() {
         image: imageConfig,
         config,
       });
-      
+
       res.json({ operationName: operation.name });
     } catch (error: any) {
       console.error("Video Gen Start Error:", error);
@@ -417,10 +389,10 @@ async function startServer() {
     try {
       const { operationName } = req.body;
       const ai = getAi();
-      
+
       const op = new GenerateVideosOperation();
       op.name = operationName;
-      
+
       const updated = await ai.operations.getVideosOperation({ operation: op });
       res.json({ done: updated.done });
     } catch (error: any) {
@@ -434,21 +406,21 @@ async function startServer() {
     try {
       const { operationName } = req.body;
       const ai = getAi();
-      
+
       const op = new GenerateVideosOperation();
       op.name = operationName;
-      
+
       const updated = await ai.operations.getVideosOperation({ operation: op });
       const uri = updated.response?.generatedVideos?.[0]?.video?.uri;
-      
+
       if (!uri) {
         throw new Error("Video URI not available");
       }
-      
+
       const videoRes = await fetch(uri, {
         headers: { "x-goog-api-key": process.env.GEMINI_API_KEY! },
       });
-      
+
       res.setHeader("Content-Type", "video/mp4");
       const buffer = await videoRes.arrayBuffer();
       res.send(Buffer.from(buffer));
@@ -463,7 +435,7 @@ async function startServer() {
     try {
       const { prompt, voiceName = "Kore", lang = "ru", speed = 1.0, pitch = 1.0 } = req.body;
       const ai = getAi();
-      
+
       let finalPrompt = prompt;
       let configLang = "ru-RU";
       if (lang === 'hy') {
@@ -475,7 +447,7 @@ async function startServer() {
       } else if (lang === 'ru') {
         finalPrompt = `Пожалуйста, произнеси следующий текст четко и естественно на русском языке: \n\n${prompt}`;
       }
-      
+
       const response = await ai.models.generateContent({
         model: "gemini-3.1-flash-tts-preview",
         contents: [{ parts: [{ text: finalPrompt }] }],
@@ -503,13 +475,13 @@ async function startServer() {
       res.status(500).json({ error: error.message || "Failed to generate TTS" });
     }
   });
-  
+
   // 7. Podcast Mode TTS (Multi-speaker)
   app.post("/api/gemini/podcast", async (req, res) => {
     try {
       const { prompt, speaker1 = "Joe", speaker2 = "Jane", voice1 = "Kore", voice2 = "Puck", lang = "ru" } = req.body;
       const ai = getAi();
-      
+
       let instructionPrefix = "";
       if (lang === 'hy') {
         instructionPrefix = "Please speak the following podcast script clearly and naturally in Armenian language. Maintain the characters and flow:\n\n";
@@ -518,7 +490,7 @@ async function startServer() {
       } else {
         instructionPrefix = "Пожалуйста, произнеси следующий сценарий подкаста четко и естественно на русском языке. Сохраняй интонации персонажей:\n\n";
       }
-      
+
       const finalPrompt = instructionPrefix + prompt;
 
       const response = await ai.models.generateContent({
@@ -575,7 +547,7 @@ async function startServer() {
   app.post("/api/instagram/token/remove", apiRateLimit, requireAdmin, async (req, res) => {
     const { accountIndex } = req.body;
     if (accountIndex !== undefined && accountIndex >= 0 && accountIndex < instagramTokens.length) {
-       instagramTokens[accountIndex] = ''; // Or use splice, but keeping array size might be easier if we rely on indices 0 and 1
+       instagramTokens[accountIndex] = '';
        instagramHandles[accountIndex] = '';
        await deleteAccount(accountIndex);
     }
@@ -648,8 +620,8 @@ async function startServer() {
   });
 
   // 9. AI Messaging Webhooks (Instagram & WhatsApp)
-  app.use("/api/webhooks/instagram", createInstagramWebhookRoute({ db, getAi }));
-  app.use("/api/webhooks/whatsapp", createWhatsappWebhookRoute({ db, getAi }));
+  app.use("/api/webhooks/instagram", createInstagramWebhookRoute({ getAi }));
+  app.use("/api/webhooks/whatsapp", createWhatsappWebhookRoute({ getAi }));
 
   // AI Classification and Generation Endpoint (manual/preview use from the admin UI)
   app.post("/api/ai-messaging/process", async (req, res) => {
@@ -657,6 +629,7 @@ async function startServer() {
       const { message, knowledgeBase } = req.body;
       const ai = getAi();
       const { draftAIReply } = await import("./src/server/messaging/aiDraft");
+
       const parsed = await draftAIReply(ai, message, knowledgeBase || []);
       res.json(parsed);
     } catch (error: any) {
@@ -675,21 +648,21 @@ async function startServer() {
         return res.status(400).json({ error: "threadId, messageId and finalReply are required" });
       }
 
-      const threadSnap = await db.collection('ai_threads').doc(threadId).get();
-      if (!threadSnap.exists) {
+      const thread = await getThread(threadId);
+      if (!thread) {
         return res.status(404).json({ error: "Thread not found" });
       }
-      const thread = threadSnap.data() as any;
+      const channel = thread.channel as string;
 
-      if (thread.channel === 'whatsapp') {
-        await sendWhatsAppText(thread.customer_handle, finalReply);
-      } else if (thread.channel === 'instagram') {
-        await sendInstagramText(thread.customer_handle, finalReply);
+      if (channel === 'whatsapp') {
+        await sendWhatsAppText(thread.customer_handle as string, finalReply);
+      } else if (channel === 'instagram') {
+        await sendInstagramText(thread.customer_handle as string, finalReply);
       } else {
-        return res.status(400).json({ error: `Unknown channel: ${thread.channel}` });
+        return res.status(400).json({ error: `Unknown channel: ${channel}` });
       }
 
-      await markMessageAnswered(db, threadId, messageId, finalReply);
+      await markMessageAnswered(threadId, messageId, finalReply);
       res.json({ success: true });
     } catch (error: any) {
       console.error("AI Messaging Send Error:", error);
@@ -698,17 +671,105 @@ async function startServer() {
     }
   });
 
-  // Setup File Uploads with Multer
+  // 10. AI Knowledge CRUD (admin-only). The admin UI calls these instead of
+  // writing to Supabase directly, since RLS blocks anon writes on
+  // ai_knowledge.
+  app.post("/api/ai-messaging/knowledge", async (req, res) => {
+    try {
+      const item = req.body;
+      const now = Date.now();
+      const { data, error } = await supabaseAdmin
+        .from('ai_knowledge')
+        .insert({ ...item, created_at: now, updated_at: now })
+        .select('id')
+        .single();
+      if (error) throw error;
+      res.json({ id: data.id });
+    } catch (e: any) {
+      console.error('Add knowledge error:', e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.patch("/api/ai-messaging/knowledge/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const patch = { ...req.body, updated_at: Date.now() };
+      // Never allow overwriting the PK or timestamps from the client.
+      delete patch.id;
+      delete patch.created_at;
+      const { error } = await supabaseAdmin
+        .from('ai_knowledge')
+        .update(patch)
+        .eq('id', id);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error('Update knowledge error:', e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/ai-messaging/knowledge/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { error } = await supabaseAdmin
+        .from('ai_knowledge')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error('Delete knowledge error:', e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // 11. Update message status from the admin Inbox (mark as needs_human / ignored / etc).
+  app.patch("/api/ai-messaging/threads/:threadId/messages/:messageId/status", async (req, res) => {
+    try {
+      const { threadId, messageId } = req.params;
+      const { status, requires_human } = req.body;
+      const now = Date.now();
+      const patch: Record<string, any> = { status };
+      if (requires_human !== undefined) patch.requires_human = requires_human;
+
+      const { error: msgErr } = await supabaseAdmin
+        .from('ai_messages')
+        .update(patch)
+        .eq('id', messageId)
+        .eq('thread_id', threadId);
+      if (msgErr) throw msgErr;
+
+      const { error: threadErr } = await supabaseAdmin
+        .from('ai_threads')
+        .update({ status, updated_at: now })
+        .eq('id', threadId);
+      if (threadErr) throw threadErr;
+
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error('Update message status error:', e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Setup File Uploads with Multer (fallback for any legacy local uploads)
   const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
+  // Generic site document write (replaces Firestore `site/{docId}.set(..., {merge:true})`).
+  // Used by contentStore / galleryStore / settingsStore / aiAssistantStore for all writes.
   app.post("/api/db/site/:docId", apiRateLimit, requireAdmin, async (req, res) => {
     try {
       const { docId } = req.params;
       const data = req.body;
-      await db.collection('site').doc(docId).set(data, { merge: true });
+      const { error } = await supabaseAdmin
+        .from('site')
+        .upsert({ key: docId, data, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+      if (error) throw error;
       res.json({ success: true });
     } catch (e: any) {
       console.error("DB update error", e);
@@ -728,14 +789,9 @@ async function startServer() {
     "video/quicktime": ".mov",
   };
 
-  // Files are uploaded to Firebase Storage (persistent) rather than the local
-  // container disk, which is ephemeral on Cloud Run and would lose uploads on
-  // every restart/redeploy. Buffer the file in memory, then write it to the
-  // bucket with a Firebase download token so the returned URL is publicly
-  // readable on the site.
-  const STORAGE_BUCKET =
-    process.env.FIREBASE_STORAGE_BUCKET || 'gen-lang-client-0533202242.firebasestorage.app';
-
+  // Files are uploaded to Supabase Storage (public `uploads` bucket) via the
+  // service role key. Buffer the file in memory, then upload it; the public
+  // URL is returned so the site can display the asset.
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit (videos are the largest expected upload)
@@ -748,7 +804,7 @@ async function startServer() {
   });
 
   // Still serve any legacy files that were written to the local uploads folder
-  // before the move to Firebase Storage.
+  // before the move to Supabase Storage.
   app.use('/uploads', express.static(uploadsDir));
 
   app.post("/api/upload", apiRateLimit, requireAdmin, (req, res) => {
@@ -763,21 +819,26 @@ async function startServer() {
         const ext = ALLOWED_UPLOAD_TYPES[req.file.mimetype] || path.extname(req.file.originalname);
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const objectPath = `uploads/${req.file.fieldname}-${uniqueSuffix}${ext}`;
-        const downloadToken = crypto.randomUUID();
-        const bucket = getStorage(firebaseAdminApp).bucket(STORAGE_BUCKET);
-        await bucket.file(objectPath).save(req.file.buffer, {
-          resumable: false,
-          contentType: req.file.mimetype,
-          metadata: {
+
+        const { error: upErr } = await supabaseAdmin
+          .storage
+          .from('uploads')
+          .upload(objectPath, req.file.buffer, {
             contentType: req.file.mimetype,
-            metadata: { firebaseStorageDownloadTokens: downloadToken },
-          },
-        });
-        const url = `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodeURIComponent(objectPath)}?alt=media&token=${downloadToken}`;
-        res.json({ url });
-      } catch (e) {
-        console.error("Firebase upload error", e);
-        res.status(500).json({ error: "Failed to upload file" });
+            upsert: false,
+          });
+        if (upErr) throw upErr;
+
+        // Public bucket → use getPublicUrl for a stable, non-expiring URL.
+        const { data: pubUrl } = supabaseAdmin
+          .storage
+          .from('uploads')
+          .getPublicUrl(objectPath);
+
+        res.json({ url: pubUrl.publicUrl });
+      } catch (e: any) {
+        console.error("Supabase upload error", e);
+        res.status(500).json({ error: "Failed to upload file", details: e.message });
       }
     });
   });
@@ -787,23 +848,22 @@ async function startServer() {
       const { url } = req.body;
       if (!url) return res.status(400).json({ error: "No URL provided" });
 
-      if (url.includes('firebasestorage.googleapis.com')) {
-        // Firebase download URL: .../o/<url-encoded object path>?alt=media&token=...
-        const match = url.match(/\/o\/([^?]+)/);
-        const objectPath = match ? decodeURIComponent(match[1]) : null;
-        if (objectPath) {
-          const bucket = getStorage(firebaseAdminApp).bucket(STORAGE_BUCKET);
-          await bucket.file(objectPath).delete().catch(console.error);
-        }
-      } else if (url.includes('storage.googleapis.com')) {
-        // Legacy public URL: https://storage.googleapis.com/<bucket>/uploads/<filename>
-        const filename = (url.split('/').pop() || '').split('?')[0];
-        if (filename) {
-          const bucket = getStorage(firebaseAdminApp).bucket(STORAGE_BUCKET);
-          await bucket.file(`uploads/${filename}`).delete().catch(console.error);
-        }
+      // Supabase storage public URLs look like:
+      //   https://<project>.supabase.co/storage/v1/object/public/uploads/<path>
+      // Try to extract the object path under the `uploads` bucket.
+      const match = url.match(/\/storage\/v1\/object\/public\/uploads\/(.+)$/);
+      if (match) {
+        const objectPath = decodeURIComponent(match[1].split('?')[0]);
+        const { error: delErr } = await supabaseAdmin
+          .storage
+          .from('uploads')
+          .remove([objectPath]);
+        if (delErr) console.error('Supabase storage delete error:', delErr);
+      } else if (url.includes('firebasestorage.googleapis.com') || url.includes('storage.googleapis.com')) {
+        // Legacy Firebase Storage URL — no-op (Firebase project is gone).
+        console.log('Skipping delete of legacy Firebase Storage URL:', url);
       } else {
-        // Legacy local file written before the move to Firebase Storage.
+        // Legacy local file written before the move to Supabase Storage.
         const fileName = path.basename((url.split('/').pop() || '').split('?')[0]);
         if (fileName) {
           const filePath = path.join(uploadsDir, fileName);

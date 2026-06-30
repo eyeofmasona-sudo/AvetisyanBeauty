@@ -1,4 +1,3 @@
-import type { Firestore } from 'firebase-admin/firestore';
 import type { GoogleGenAI } from '@google/genai';
 import { draftAIReply } from './aiDraft';
 import { addInboundMessage, findOrCreateThread, getAISettings, getActiveKnowledgeBase, markMessageAnswered } from './threadStore';
@@ -16,13 +15,12 @@ export interface IncomingMessage {
 }
 
 export async function processIncomingMessage(
-  db: Firestore,
   ai: GoogleGenAI,
   incoming: IncomingMessage
 ): Promise<void> {
-  const settings = await getAISettings(db);
+  const settings = await getAISettings();
 
-  const threadId = await findOrCreateThread(db, {
+  const threadId = await findOrCreateThread({
     channel: incoming.channel,
     external_thread_id: incoming.external_thread_id,
     customer_name: incoming.customer_name,
@@ -31,7 +29,7 @@ export async function processIncomingMessage(
   });
 
   if (!settings.is_enabled) {
-    await addInboundMessage(db, threadId, {
+    await addInboundMessage(threadId, {
       channel: incoming.channel,
       original_text: incoming.text,
       status: 'needs_human',
@@ -40,13 +38,13 @@ export async function processIncomingMessage(
     return;
   }
 
-  const knowledgeBase = await getActiveKnowledgeBase(db);
+  const knowledgeBase = await getActiveKnowledgeBase();
   const draft = await draftAIReply(ai, incoming.text, knowledgeBase as any);
   const confidencePct = Math.round(draft.confidence * 100);
 
   let status: 'new' | 'needs_human' | 'answered' = draft.requires_human ? 'needs_human' : 'new';
 
-  const messageId = await addInboundMessage(db, threadId, {
+  const messageId = await addInboundMessage(threadId, {
     channel: incoming.channel,
     original_text: incoming.text,
     detected_language: draft.detected_language,
@@ -69,7 +67,7 @@ export async function processIncomingMessage(
       } else {
         await sendInstagramText(incoming.customer_handle, draft.suggested_reply);
       }
-      await markMessageAnswered(db, threadId, messageId, draft.suggested_reply);
+      await markMessageAnswered(threadId, messageId, draft.suggested_reply);
     } catch (e) {
       if (e instanceof MetaSendError) {
         console.error('Auto-reply send failed (likely missing Meta credentials):', e.message);

@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { supabase } from '../lib/supabase';
 
 export interface SectionContent {
   title?: string;
@@ -68,7 +67,7 @@ const realSpecialists: SpecialistItem[] = [
   },
   {
     id: "lilit-hovhannisyan",
-    name: "Լիլիթ Հովհանիսյան",
+    name: "Լիլիթ Հովհաննիսյան",
     role: "",
     exp: "",
     spec: "",
@@ -278,9 +277,15 @@ interface ContentState {
 
 export const loadContentFromDB = async () => {
   try {
-    const docSnap = await getDoc(doc(db, 'site', 'content'));
-    if (docSnap.exists()) {
-      useContentStore.setState({ content: normalizeSpecialists(docSnap.data() as LocalizedContent) });
+    const { data, error } = await supabase
+      .from('site')
+      .select('data')
+      .eq('key', 'content')
+      .maybeSingle();
+
+    if (error) throw error;
+    if (data?.data && Object.keys(data.data).length > 0) {
+      useContentStore.setState({ content: normalizeSpecialists(data.data as LocalizedContent) });
     }
   } catch (e) {
     console.error("Failed to load content from DB", e);
@@ -290,10 +295,8 @@ export const loadContentFromDB = async () => {
 export const saveContentToDB = async (content: LocalizedContent) => {
   try {
     // Routed through the admin-only backend endpoint (cookie-authenticated)
-    // instead of a direct Firestore write, since Firestore's security rules
-    // only allow writes from the bootstrapped Firebase user and the admin
-    // panel also supports a separate username/password login that has no
-    // Firebase session.
+    // because the server uses the service role key to bypass RLS — anon
+    // client cannot write to `site` from the browser.
     const res = await fetch('/api/db/site/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -327,7 +330,7 @@ export const useContentStore = create<ContentState>()(
         set({ content: newContent });
         await saveContentToDB(newContent);
       },
-      updateInstagramPost: (index, post) => 
+      updateInstagramPost: (index, post) =>
         set((state) => {
           const newPosts = [...state.instagramPosts];
           newPosts[index] = { ...newPosts[index], ...post };
