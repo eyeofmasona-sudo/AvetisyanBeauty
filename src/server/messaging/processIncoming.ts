@@ -1,8 +1,8 @@
 import type { GoogleGenAI } from '@google/genai';
-import { draftAIReply } from './aiDraft';
-import { addInboundMessage, findOrCreateThread, getAISettings, getActiveKnowledgeBase, markMessageAnswered } from './threadStore';
-import { sendInstagramText, sendWhatsAppText, MetaSendError } from './metaSend';
-import type { Channel } from './threadStore';
+import { draftAIReply } from './aiDraft.js';
+import { addInboundMessage, findOrCreateThread, getAISettings, getActiveKnowledgeBase, markMessageAnswered } from './threadStore.js';
+import { sendInstagramText, sendWhatsAppText, MetaSendError } from './metaSend.js';
+import type { Channel } from './threadStore.js';
 
 const AUTO_REPLY_CONFIDENCE_THRESHOLD = 0.75;
 

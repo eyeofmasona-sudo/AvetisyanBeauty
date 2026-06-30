@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { GoogleGenAI } from '@google/genai';
-import { verifyMetaSignature } from './metaSignatureVerification';
-import { processIncomingMessage } from '../messaging/processIncoming';
+import { verifyMetaSignature } from './metaSignatureVerification.js';
+import { processIncomingMessage } from '../messaging/processIncoming.js';
 
 export function createInstagramWebhookRoute(deps: { getAi: () => GoogleGenAI }) {
   const router = Router();

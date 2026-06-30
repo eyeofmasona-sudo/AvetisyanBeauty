@@ -5,7 +5,7 @@ import crypto from "crypto";
 import multer from "multer";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
-import { supabaseAdmin } from "./src/server/lib/supabaseAdmin";
+import { supabaseAdmin } from "./src/server/lib/supabaseAdmin.js";
 
 function encodeWAV(pcmBuffer: Buffer, sampleRate: number, numChannels: number, bitsPerSample: number): Buffer {
   const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
@@ -35,10 +35,10 @@ import { GoogleGenAI, Modality, GenerateVideosOperation } from "@google/genai";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
-import { createInstagramWebhookRoute } from "./src/server/webhooks/instagramWebhookRoute";
-import { createWhatsappWebhookRoute } from "./src/server/webhooks/whatsappWebhookRoute";
-import { sendInstagramText, sendWhatsAppText, MetaSendError } from "./src/server/messaging/metaSend";
-import { markMessageAnswered, getThread } from "./src/server/messaging/threadStore";
+import { createInstagramWebhookRoute } from "./src/server/webhooks/instagramWebhookRoute.js";
+import { createWhatsappWebhookRoute } from "./src/server/webhooks/whatsappWebhookRoute.js";
+import { sendInstagramText, sendWhatsAppText, MetaSendError } from "./src/server/messaging/metaSend.js";
+import { markMessageAnswered, getThread } from "./src/server/messaging/threadStore.js";
 
 dotenv.config();
 
@@ -633,7 +633,7 @@ export async function createApp() {
     try {
       const { message, knowledgeBase } = req.body;
       const ai = getAi();
-      const { draftAIReply } = await import("./src/server/messaging/aiDraft");
+      const { draftAIReply } = await import("./src/server/messaging/aiDraft.js");
 
       const parsed = await draftAIReply(ai, message, knowledgeBase || []);
       res.json(parsed);

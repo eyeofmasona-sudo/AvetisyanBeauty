@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '../lib/supabaseAdmin';
+import { supabaseAdmin } from '../lib/supabaseAdmin.js';
 
 export type Channel = 'instagram' | 'whatsapp';
 export type AIStatus = 'new' | 'answered' | 'needs_human' | 'booked' | 'ignored';
